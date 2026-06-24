@@ -131,7 +131,7 @@ function App() {
     setupPlayer(previewVideoRef.current, previewHlsRef);
     setupPlayer(publicVideoRef.current, publicHlsRef);
 
-  }, [status.activeVideo?.id, status.activeVideo?.filePath]);
+  }, [status.activeVideo?.id, status.activeVideo?.filePath, activeTab]);
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
