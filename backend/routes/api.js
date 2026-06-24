@@ -50,6 +50,40 @@ router.get('/playlist', async (req, res) => {
   }
 });
 
+// Add external stream URL to playlist
+router.post('/playlist', async (req, res) => {
+  try {
+    const { title, videoUrl, duration } = req.body;
+    if (!videoUrl) {
+      return res.status(400).json({ error: 'videoUrl is required' });
+    }
+
+    // Get highest orderIndex to place this at the end
+    const lastItem = await Playlist.findOne().sort('-orderIndex');
+    const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
+
+    const newItem = new Playlist({
+      title: title || 'External Live Stream',
+      filePath: videoUrl, // Save URL in the path field
+      duration: duration || 3600, // Default to 1 hour
+      orderIndex,
+      status: 'active'
+    });
+
+    await newItem.save();
+    
+    // Notify clients
+    const updatedPlaylist = await Playlist.find().sort('orderIndex');
+    if (req.app.get('io')) {
+      req.app.get('io').emit('playlist_updated', updatedPlaylist);
+    }
+
+    res.status(201).json(newItem);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Upload and add video to playlist
 router.post('/playlist/upload', upload.single('video'), async (req, res) => {
   try {
