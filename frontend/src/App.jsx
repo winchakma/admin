@@ -102,17 +102,11 @@ function App() {
           hls.loadSource(videoUrl);
           hls.attachMedia(videoEl);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            if (status.activeVideo.offset) {
-              videoEl.currentTime = status.activeVideo.offset;
-            }
             videoEl.play().catch(e => console.log("Autoplay blocked:", e));
           });
         } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
           videoEl.src = videoUrl;
           videoEl.addEventListener('loadedmetadata', () => {
-            if (status.activeVideo.offset) {
-              videoEl.currentTime = status.activeVideo.offset;
-            }
             videoEl.play().catch(e => console.log("Autoplay blocked:", e));
           });
         }
