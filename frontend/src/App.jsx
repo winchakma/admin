@@ -117,20 +117,17 @@ function App() {
     }
   };
 
-  // Immediate state update & DEBOUNCED background save
   const updateOverlayField = (updates, debounce = false) => {
-    // 1. Update React state immediately (always synchronous and instant)
     setOverlays(prev => ({
       ...prev,
       ...updates
     }));
 
-    // 2. Handle background API save
     if (debounce) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveConfigToBackend(updates);
-      }, 1000); // 1 second debounce to prevent network flood during typing
+      }, 1000);
     } else {
       saveConfigToBackend(updates);
     }
@@ -152,7 +149,6 @@ function App() {
     formData.append('video', file);
     formData.append('title', uploadTitle || file.name);
 
-    // Optimistic insert
     const tempItem = {
       _id: Date.now().toString(),
       title: uploadTitle || file.name,
@@ -215,10 +211,10 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#E3E3E3] text-[#333333] font-sans antialiased overflow-x-hidden select-none">
+    <div className="min-h-screen flex flex-col sm:flex-row bg-[#E3E3E3] text-[#333333] font-sans antialiased overflow-x-hidden select-none pb-20 sm:pb-0">
       
-      {/* LEFT SIDEBAR NAVIGATION */}
-      <div className="w-16 bg-[#AFAFAF] border-r border-[#969696] flex flex-col items-center py-6 justify-between shrink-0">
+      {/* DESKTOP SIDEBAR NAVIGATION */}
+      <div className="hidden sm:flex w-16 bg-[#AFAFAF] border-r border-[#969696] flex-col items-center py-6 justify-between shrink-0">
         <div className="flex flex-col gap-6 items-center w-full">
           <div className="text-[10px] font-black text-slate-800 tracking-wider mb-2 text-center uppercase">Site<br/>Logo</div>
           
@@ -242,15 +238,39 @@ function App() {
         </button>
       </div>
 
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <div className="flex sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#AFAFAF] border-t border-[#969696] z-50 items-center justify-around px-4 shadow-lg">
+        <button 
+          onClick={() => setActiveTab('admin')} 
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'admin' ? 'bg-[#ECECEC] text-[#4A4A4A] border border-slate-300' : 'text-[#ECECEC]'}`}
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-[9px] font-bold mt-0.5">Admin</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('public')} 
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'public' ? 'bg-[#ECECEC] text-[#4A4A4A] border border-slate-300' : 'text-[#ECECEC]'}`}
+        >
+          <Folder className="w-5 h-5" />
+          <span className="text-[9px] font-bold mt-0.5">Viewer</span>
+        </button>
+        <button className="flex flex-col items-center justify-center w-12 h-12 text-[#ECECEC]">
+          <Settings className="w-5 h-5" />
+          <span className="text-[9px] font-bold mt-0.5">Config</span>
+        </button>
+      </div>
+
       {/* MAIN CONTAINER */}
-      <div className="flex-1 flex flex-col p-8 overflow-y-auto">
+      <div className="flex-1 flex flex-col p-4 sm:p-8 overflow-y-auto">
         
         {/* Top Bar for View Toggle */}
-        <div className="flex justify-between items-center mb-6 max-w-7xl w-full mx-auto">
-          <h2 className="text-2xl font-black text-slate-800 tracking-wider">IPTV STREAM CONTROL CENTER</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-7xl w-full mx-auto">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-wider">IPTV STREAM CONTROL CENTER</h2>
+          </div>
           <button 
             onClick={() => setActiveTab(activeTab === 'admin' ? 'public' : 'admin')} 
-            className="px-5 py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-sm tracking-wide shadow-md transition-all animate-pulse"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-sm tracking-wide shadow-md transition-all text-center"
           >
             {activeTab === 'admin' ? 'Go to Public Viewer Page' : 'Return to Admin Panel'}
           </button>
@@ -258,16 +278,16 @@ function App() {
 
         {activeTab === 'admin' ? (
           /* ADMIN DASHBOARD */
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl w-full mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-12 gap-6 sm:gap-8 max-w-7xl w-full mx-auto">
             
-            {/* COLUMN 1: LIVE PREVIEW & CONTROLS (cols 4) */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* COLUMN 1: LIVE PREVIEW & CONTROLS */}
+            <div className="md:col-span-6 lg:col-span-4 flex flex-col gap-6">
               
               {/* Live Preview Screen */}
-              <div className="bg-[#ECECEC] rounded-xl p-5 shadow-sm border border-white/60">
+              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-extrabold text-[#333333] uppercase tracking-wide">Live Preview</span>
-                  <button className="px-3 py-1 rounded bg-[#C92C2C] text-white font-bold text-[10px] tracking-widest flex items-center gap-1">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">Live Preview</span>
+                  <button className="px-2.5 py-1 rounded bg-[#C92C2C] text-white font-bold text-[9px] sm:text-[10px] tracking-widest flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5 fill-white text-[#C92C2C]" />
                     BROADCAST HALT
                   </button>
@@ -275,14 +295,13 @@ function App() {
 
                 {/* Simulated screen box */}
                 <div className="aspect-video w-full bg-[#66DE93] rounded-lg border border-[#50BF7B] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
-                  {/* Top logo */}
                   <div className="px-2 py-1 bg-slate-900/60 rounded text-[9px] font-bold text-white self-start">
                     Logo
                   </div>
 
-                  {/* OTS Overlay rendering in live preview */}
+                  {/* OTS Overlay */}
                   {overlays.otsActive && (
-                    <div className="absolute right-3 bottom-12 w-16 h-16 bg-[#B3B3B3] rounded border border-white/40 flex items-center justify-center p-1 text-[8px] font-bold font-mono text-slate-800 text-center uppercase shadow overflow-hidden">
+                    <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 bg-[#B3B3B3] rounded border border-white/40 flex items-center justify-center p-1 text-[8px] font-bold font-mono text-slate-800 text-center uppercase shadow overflow-hidden">
                       {overlays.otsImagePath ? (
                         <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                       ) : (
@@ -291,7 +310,7 @@ function App() {
                     </div>
                   )}
 
-                  {/* Overlay text banner with right-to-left scrolling marquee */}
+                  {/* Overlay text banners */}
                   <div className="w-full mt-auto flex flex-col gap-1 text-[7px] font-bold text-slate-900 select-none">
                     {overlays.ticker1Active && (
                       <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono items-center overflow-hidden">
@@ -326,20 +345,20 @@ function App() {
               </div>
 
               {/* Insert Now Component */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 flex flex-col items-center justify-center text-center gap-4 aspect-[4/3] cursor-pointer hover:bg-slate-50/50 transition-all">
-                <Upload className="w-12 h-12 text-[#333333] stroke-[1.5]" />
-                <span className="text-lg font-bold text-[#333333]">Insert Now</span>
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 flex flex-col items-center justify-center text-center gap-4 py-8 sm:aspect-[4/3] cursor-pointer hover:bg-slate-50/50 transition-all">
+                <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-[#333333] stroke-[1.5]" />
+                <span className="text-base sm:text-lg font-bold text-[#333333]">Insert Now</span>
               </div>
 
             </div>
 
-            {/* COLUMN 2: NEWS TICKERS & OTS CONFIGURATION (cols 4) */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* COLUMN 2: NEWS TICKERS & OTS CONFIGURATION */}
+            <div className="md:col-span-6 lg:col-span-4 flex flex-col gap-6">
               
               {/* News Tickers config */}
-              <div className="bg-[#ECECEC] rounded-xl p-5 shadow-sm border border-white/60 flex flex-col gap-5">
+              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60 flex flex-col gap-5">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-extrabold text-[#333333] uppercase tracking-wide">News Ticker</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">News Ticker</span>
                   <button className="w-6 h-6 rounded-full bg-[#E95C5C]/20 hover:bg-[#E95C5C]/35 text-[#C92C2C] flex items-center justify-center transition-all">
                     <Play className="w-3.5 h-3.5 fill-[#C92C2C] stroke-none" />
                   </button>
@@ -353,14 +372,14 @@ function App() {
                     placeholder="Title Card" 
                     value={overlays.ticker1Title || ''} 
                     onChange={(e) => updateOverlayField({ ticker1Title: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
                     value={overlays.ticker1Text || ''} 
                     onChange={(e) => updateOverlayField({ ticker1Text: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <button 
                     onClick={() => updateOverlayField({ ticker1Active: !overlays.ticker1Active })}
@@ -378,14 +397,14 @@ function App() {
                     placeholder="Title Card" 
                     value={overlays.ticker2Title || ''} 
                     onChange={(e) => updateOverlayField({ ticker2Title: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
                     value={overlays.ticker2Text || ''} 
                     onChange={(e) => updateOverlayField({ ticker2Text: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <button 
                     onClick={() => updateOverlayField({ ticker2Active: !overlays.ticker2Active })}
@@ -398,7 +417,7 @@ function App() {
                 {/* Time and Date Toggles */}
                 <div className="flex flex-col gap-3">
                   <span className="text-[11px] font-bold text-[#666666] tracking-wide text-center">Time and Date</span>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <div className="flex-1 bg-[#D9D9D9] rounded-xl px-4 py-2 flex items-center justify-between">
                       <span className="text-xs font-bold text-[#333333]">Time</span>
                       <button 
@@ -423,9 +442,9 @@ function App() {
               </div>
 
               {/* OTS Graphic config */}
-              <div className="bg-[#ECECEC] rounded-xl p-5 shadow-sm border border-white/60 flex flex-col gap-4">
-                <span className="text-sm font-extrabold text-[#333333] uppercase tracking-wide">OTS Graphic</span>
-                <div className="bg-[#969696] rounded-xl p-4 flex gap-4">
+              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60 flex flex-col gap-4">
+                <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">OTS Graphic</span>
+                <div className="bg-[#969696] rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
                     <label className="py-2.5 rounded-lg bg-[#ECECEC] hover:bg-[#DFDFDF] text-[#333333] font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
@@ -437,7 +456,7 @@ function App() {
                       Bottom Right
                     </button>
                   </div>
-                  <div className="w-24 h-24 bg-[#B3B3B3] rounded-lg border border-white/30 flex items-center justify-center p-2 shadow-inner overflow-hidden">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#B3B3B3] rounded-lg border border-white/30 flex items-center justify-center p-2 shadow-inner overflow-hidden mx-auto sm:mx-0">
                     {overlays.otsImagePath ? (
                       <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain rounded" />
                     ) : (
@@ -457,15 +476,15 @@ function App() {
 
             </div>
 
-            {/* COLUMN 3: VIDEO PLAYLIST SERIAL (cols 4) */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* COLUMN 3: VIDEO PLAYLIST SERIAL */}
+            <div className="md:col-span-12 lg:col-span-4 flex flex-col gap-6">
               
               {/* Video Playlist Serial container */}
-              <div className="bg-[#ECECEC] rounded-xl p-5 shadow-sm border border-white/60 flex flex-col gap-4 flex-1">
-                <span className="text-sm font-extrabold text-[#333333] uppercase tracking-wide">Video Playlist Serial</span>
+              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60 flex flex-col gap-4 flex-1">
+                <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">Video Playlist Serial</span>
                 
                 {/* Table headers */}
-                <div className="grid grid-cols-12 text-center text-[10px] font-bold text-[#666666] tracking-widest pb-1 border-b border-[#CCCCCC] select-none">
+                <div className="grid grid-cols-12 text-center text-[9px] sm:text-[10px] font-bold text-[#666666] tracking-widest pb-1 border-b border-[#CCCCCC] select-none">
                   <div className="col-span-6 text-left pl-7">TITLE</div>
                   <div className="col-span-2">LEFT</div>
                   <div className="col-span-2">LEFT</div>
@@ -473,22 +492,22 @@ function App() {
                 </div>
 
                 {/* List rows */}
-                <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[350px] pr-1">
+                <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[300px] sm:max-h-[350px] pr-1">
                   {playlist.map((video, idx) => (
-                    <div key={video._id} className="grid grid-cols-12 items-center bg-white rounded-lg p-2.5 border border-slate-200/50 shadow-sm text-center">
-                      <div className="col-span-6 flex items-center gap-2 text-left min-w-0">
+                    <div key={video._id} className="grid grid-cols-12 items-center bg-white rounded-lg p-2 sm:p-2.5 border border-slate-200/50 shadow-sm text-center">
+                      <div className="col-span-6 flex items-center gap-1.5 sm:gap-2 text-left min-w-0">
                         <button className="text-slate-400 hover:text-slate-600">
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="w-3.5 h-3.5" />
                         </button>
-                        <div className="w-8 h-8 rounded bg-[#B3B3B3] shrink-0"></div>
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded bg-[#B3B3B3] shrink-0"></div>
                         <span className="text-xs font-bold text-[#333333] truncate pr-1">{video.title}</span>
                       </div>
                       
                       {/* Left timer columns */}
-                      <div className="col-span-2 text-[10px] font-bold text-[#50BF7B] tracking-wider">
+                      <div className="col-span-2 text-[9px] sm:text-[10px] font-bold text-[#50BF7B] tracking-wider">
                         {formatTime(video.duration)}
                       </div>
-                      <div className="col-span-2 text-[10px] font-bold text-[#C92C2C] tracking-wider">
+                      <div className="col-span-2 text-[9px] sm:text-[10px] font-bold text-[#C92C2C] tracking-wider">
                         {idx === 0 ? '11:23:46' : '12:23:46'}
                       </div>
                       
@@ -497,7 +516,7 @@ function App() {
                           onClick={() => handleRemoveVideo(video._id)}
                           className="text-[#C92C2C] hover:text-[#AC2323] transition-all"
                         >
-                          <XCircle className="w-6 h-6 fill-[#C92C2C] text-white" />
+                          <XCircle className="w-5 h-5 sm:w-6 sm:h-6 fill-[#C92C2C] text-white" />
                         </button>
                       </div>
                     </div>
@@ -511,9 +530,9 @@ function App() {
                     placeholder="Enter video title (optional)" 
                     value={uploadTitle} 
                     onChange={(e) => setUploadTitle(e.target.value)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none w-full"
                   />
-                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-[#333333] font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-[#C5C5C5] transition-all shadow-sm cursor-pointer">
+                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-[#333333] font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-[#C5C5C5] transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     Add Video
                     <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
@@ -526,26 +545,26 @@ function App() {
           </div>
         ) : (
           /* VIEWER MODE */
-          <div className="flex flex-col items-center justify-center p-8 bg-slate-900 min-h-[80vh] rounded-2xl border border-slate-800">
+          <div className="flex flex-col items-center justify-center p-2 sm:p-8 bg-slate-900 min-h-[60vh] sm:min-h-[80vh] rounded-2xl border border-slate-800 max-w-7xl w-full mx-auto">
             <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl relative">
-              <div className="aspect-video w-full bg-[#66DE93] relative overflow-hidden flex flex-col justify-between p-6">
+              <div className="aspect-video w-full bg-[#66DE93] relative overflow-hidden flex flex-col justify-between p-4 sm:p-6">
                 
                 {/* Site Logo */}
-                <div className="px-3 py-1.5 bg-slate-900/60 rounded text-xs font-bold text-white self-start">
+                <div className="px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-900/60 rounded text-[10px] sm:text-xs font-bold text-white self-start">
                   Logo
                 </div>
 
                 {/* OTS graphic overlay in public player */}
                 {overlays.otsActive && overlays.otsImagePath && (
-                  <div className="absolute right-6 bottom-16 w-36 aspect-square bg-[#B3B3B3] rounded-lg border border-white/40 flex items-center justify-center p-2 text-sm font-bold font-mono text-slate-800 text-center uppercase shadow-2xl overflow-hidden">
+                  <div className="absolute right-4 bottom-14 sm:right-6 sm:bottom-16 w-24 sm:w-36 aspect-square bg-[#B3B3B3] rounded-lg border border-white/40 flex items-center justify-center p-1.5 text-[11px] sm:text-sm font-bold font-mono text-slate-800 text-center uppercase shadow-2xl overflow-hidden">
                     <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
 
                 {/* Overlay text banners with scrolling marquee */}
-                <div className="w-full mt-auto flex flex-col gap-2 font-bold text-slate-905 text-xs select-none">
+                <div className="w-full mt-auto flex flex-col gap-1.5 sm:gap-2 font-bold text-slate-900 text-[10px] sm:text-xs select-none">
                   {overlays.ticker1Active && (
-                    <div className="w-full bg-slate-950/80 text-white px-4 py-2 rounded-lg border-l-4 border-[#50BF7B] flex justify-between items-center shadow-lg font-mono overflow-hidden">
+                    <div className="w-full bg-slate-950/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border-l-4 border-[#50BF7B] flex justify-between items-center shadow-lg font-mono overflow-hidden">
                       <div className="flex gap-2 flex-1 min-w-0 mr-4">
                         <span>{overlays.ticker1Title}:</span>
                         <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
@@ -554,7 +573,7 @@ function App() {
                     </div>
                   )}
                   {overlays.ticker2Active && (
-                    <div className="w-full bg-slate-950/80 text-white px-4 py-2 rounded-lg border-l-4 border-[#C92C2C] flex justify-between items-center shadow-lg font-mono overflow-hidden">
+                    <div className="w-full bg-slate-950/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border-l-4 border-[#C92C2C] flex justify-between items-center shadow-lg font-mono overflow-hidden">
                       <div className="flex gap-2 flex-1 min-w-0 mr-4">
                         <span>{overlays.ticker2Title}:</span>
                         <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
@@ -566,11 +585,11 @@ function App() {
 
               </div>
 
-              <div className="bg-slate-800 px-6 py-4 flex items-center justify-between border-t border-slate-700">
-                <span className="text-sm font-bold text-slate-300">Live Linear Broadcast (24/7 View Mode)</span>
+              <div className="bg-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between border-t border-slate-700">
+                <span className="text-xs sm:text-sm font-bold text-slate-300">Live Linear Broadcast (24/7 View Mode)</span>
                 <button 
                   onClick={() => setActiveTab('admin')} 
-                  className="px-4 py-1.5 bg-[#5367B5] hover:bg-[#46579E] rounded text-xs font-bold text-white transition-all"
+                  className="px-3 py-1.5 bg-[#5367B5] hover:bg-[#46579E] rounded text-[10px] sm:text-xs font-bold text-white transition-all"
                 >
                   Return to Dashboard
                 </button>
