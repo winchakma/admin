@@ -299,13 +299,13 @@ function App() {
                     Logo
                   </div>
 
-                  {/* OTS Overlay */}
+                  {/* OTS Overlay - TRANSPARENT BACKGROUND (No border/bg) */}
                   {overlays.otsActive && (
-                    <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 bg-[#B3B3B3] rounded border border-white/40 flex items-center justify-center p-1 text-[8px] font-bold font-mono text-slate-800 text-center uppercase shadow overflow-hidden">
+                    <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center p-0 overflow-hidden bg-transparent">
                       {overlays.otsImagePath ? (
                         <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                       ) : (
-                        'OTS Graphic'
+                        <div className="w-full h-full bg-[#B3B3B3]/40 rounded border border-white/20 flex items-center justify-center text-[7px] font-bold text-slate-800 uppercase">OTS</div>
                       )}
                     </div>
                   )}
@@ -431,9 +431,7 @@ function App() {
                       <span className="text-xs font-bold text-[#333333]">Date</span>
                       <button 
                         onClick={() => updateOverlayField({ showDate: !overlays.showDate })}
-                        className={`w-8 h-4 rounded-full p-0.5 transition-all ${overlays.showDate ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
-                      >
-                        <div className={`w-3 h-3 bg-white rounded-full transition-all ${overlays.showDate ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                        className={`w-8 h-4 rounded-full p-0.5 transition-all ${overlays.showDate ? 'translate-x-4' : 'translate-x-0'}`}></div>
                       </button>
                     </div>
                   </div>
@@ -554,9 +552,9 @@ function App() {
                   Logo
                 </div>
 
-                {/* OTS graphic overlay in public player */}
+                {/* OTS graphic overlay in public player - TRANSPARENT BACKGROUND (No border/bg) */}
                 {overlays.otsActive && overlays.otsImagePath && (
-                  <div className="absolute right-4 bottom-14 sm:right-6 sm:bottom-16 w-24 sm:w-36 aspect-square bg-[#B3B3B3] rounded-lg border border-white/40 flex items-center justify-center p-1.5 text-[11px] sm:text-sm font-bold font-mono text-slate-800 text-center uppercase shadow-2xl overflow-hidden">
+                  <div className="absolute right-4 bottom-14 sm:right-6 sm:bottom-16 w-24 sm:w-36 aspect-square flex items-center justify-center overflow-hidden bg-transparent">
                     <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
