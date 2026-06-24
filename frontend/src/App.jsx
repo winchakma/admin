@@ -99,8 +99,8 @@ function App() {
           }
           const hls = new Hls();
           hlsRef.current = hls;
-          hls.loadSource(videoUrl);
           hls.attachMedia(videoEl);
+          hls.loadSource(videoUrl);
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             videoEl.play().catch(e => console.log("Autoplay blocked:", e));
           });
