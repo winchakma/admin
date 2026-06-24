@@ -82,9 +82,10 @@ function App() {
       return;
     }
 
-    const videoUrl = status.activeVideo.filePath.startsWith('http://') || status.activeVideo.filePath.startsWith('https://')
-      ? status.activeVideo.filePath
-      : `${SOCKET_URL}/${status.activeVideo.filePath}`;
+    const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
+    const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
+      ? normalizedPath
+      : `${SOCKET_URL}/${normalizedPath}`;
 
     const setupPlayer = (videoEl, hlsRef) => {
       if (!videoEl) return;

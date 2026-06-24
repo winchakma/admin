@@ -91,7 +91,7 @@ router.post('/playlist/upload', upload.single('video'), async (req, res) => {
       return res.status(400).json({ error: 'No video file uploaded' });
     }
 
-    const filePath = path.join('uploads', req.file.filename);
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
     const fullPath = path.join(__dirname, '..', filePath);
     const duration = await getVideoDuration(fullPath);
 
@@ -216,7 +216,7 @@ router.post('/overlays/upload-ots', upload.single('image'), async (req, res) => 
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const filePath = path.join('uploads', req.file.filename);
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
     let config = await Overlay.findOne();
     if (!config) {
       config = new Overlay({ otsImagePath: filePath, otsActive: true });
