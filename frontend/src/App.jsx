@@ -54,6 +54,11 @@ function App() {
   const socketRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
+  const [ads, setAds] = useState([]);
+  const [adTitle, setAdTitle] = useState('');
+  const [isAdUploading, setIsAdUploading] = useState(false);
+
+
   // Live time and date updater
   useEffect(() => {
     const timer = setInterval(() => {
@@ -165,8 +170,13 @@ function App() {
       setOverlays(prev => ({ ...prev, ...updatedOverlays }));
     });
 
+    s.on('ads_updated', (updatedAds) => {
+      setAds(updatedAds);
+    });
+
     fetchPlaylist();
     fetchOverlays();
+    fetchAds();
 
     return () => s.disconnect();
   }, []);
@@ -178,6 +188,66 @@ function App() {
       setPlaylist(data);
     } catch (e) {
       console.warn('API Offline, using local data');
+    }
+  };
+
+  const fetchAds = async () => {
+    try {
+      const res = await fetch(`${SOCKET_URL}/api/ads`);
+      const data = await res.json();
+      setAds(data);
+    } catch (e) {
+      console.warn('API Offline, could not fetch ads');
+    }
+  };
+
+  const handleAdUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsAdUploading(true);
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('title', adTitle || file.name);
+
+    try {
+      const res = await fetch(`${SOCKET_URL}/api/ads/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      await res.json();
+      setAdTitle('');
+      fetchAds();
+    } catch (err) {
+      console.warn('Ad upload failed');
+    } finally {
+      setIsAdUploading(false);
+    }
+  };
+
+  const handlePlayAd = async (id) => {
+    try {
+      await fetch(`${SOCKET_URL}/api/ads/${id}/play`, { method: 'POST' });
+    } catch (err) {
+      console.warn('Play ad failed');
+    }
+  };
+
+  const handleStopAd = async () => {
+    try {
+      await fetch(`${SOCKET_URL}/api/ads/stop`, { method: 'POST' });
+    } catch (err) {
+      console.warn('Stop ad failed');
+    }
+  };
+
+  const handleRemoveAd = async (id) => {
+    setAds(ads.filter(item => item._id !== id));
+    try {
+      await fetch(`${SOCKET_URL}/api/ads/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('Delete ad failed');
+      fetchAds();
     }
   };
 
@@ -495,12 +565,68 @@ function App() {
                 </div>
               </div>
 
-              {/* Insert Now Component */}
-              <label className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 flex flex-col items-center justify-center text-center gap-4 py-8 sm:aspect-[4/3] cursor-pointer hover:bg-slate-50/50 transition-all">
-                <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-[#333333] stroke-[1.5]" />
-                <span className="text-base sm:text-lg font-bold text-[#333333]">Insert Now</span>
-                <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
-              </label>
+              {/* Ad Playout Component */}
+              <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200/60 flex flex-col gap-4">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">Ad Playout</span>
+                  {status.activeVideo?.isAd && (
+                    <button 
+                      onClick={handleStopAd}
+                      className="px-2.5 py-1 rounded bg-[#C92C2C] text-white font-extrabold text-[9px] sm:text-[10px] tracking-wide animate-pulse shadow-sm"
+                    >
+                      STOP AD
+                    </button>
+                  )}
+                </div>
+
+                {/* Upload Ad Area */}
+                <div className="flex flex-col gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Enter ad title (optional)" 
+                    value={adTitle} 
+                    onChange={(e) => setAdTitle(e.target.value)}
+                    className="bg-[#F0F0F0] border-none rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none w-full"
+                  />
+                  <label className="py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full">
+                    <Upload className="w-4 h-4 stroke-[3]" />
+                    {isAdUploading ? 'Uploading Ad...' : 'Upload & Play Ad Now'}
+                    <input type="file" accept="video/*" onChange={handleAdUpload} className="hidden" disabled={isAdUploading} />
+                  </label>
+                </div>
+
+                {/* Ad Playlist (history of uploaded ads) */}
+                <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto mt-2 pr-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ad Playlist</span>
+                  {ads.map((ad) => (
+                    <div key={ad._id} className="flex items-center justify-between bg-slate-50 rounded-lg p-2 border border-slate-200/40 text-xs">
+                      <div className="flex flex-col min-w-0 pr-2">
+                        <span className="font-bold text-slate-700 truncate">{ad.title}</span>
+                        <span className="text-[9px] text-slate-400 font-mono">{formatTime(ad.duration)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button 
+                          onClick={() => handlePlayAd(ad._id)}
+                          className="px-2 py-1 rounded bg-[#50BF7B] hover:bg-[#43A668] text-white font-bold text-[9px] uppercase tracking-wide transition-all shadow-sm"
+                        >
+                          Play
+                        </button>
+                        <button 
+                          onClick={() => handleRemoveAd(ad._id)}
+                          className="text-slate-400 hover:text-[#C92C2C] transition-all"
+                        >
+                          <XCircle className="w-4.5 h-4.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {ads.length === 0 && (
+                    <div className="text-center py-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      No Ads Uploaded Yet
+                    </div>
+                  )}
+                </div>
+              </div>
 
             </div>
 

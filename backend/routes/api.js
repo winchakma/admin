@@ -6,6 +6,9 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const Playlist = require('../models/Playlist');
 const Overlay = require('../models/Overlay');
+const AdItem = require('../models/AdItem');
+const AdState = require('../models/AdState');
+
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -231,6 +234,148 @@ router.post('/overlays/upload-ots', upload.single('image'), async (req, res) => 
     }
 
     res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* --- Ad Playlist & Playout Routes --- */
+
+// Get all ad items
+router.get('/ads', async (req, res) => {
+  try {
+    const ads = await AdItem.find().sort({ createdAt: -1 });
+    res.json(ads);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload and auto-play ad
+router.post('/ads/upload', upload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No ad video file uploaded' });
+    }
+
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    const fullPath = path.join(__dirname, '..', filePath);
+    const duration = await getVideoDuration(fullPath);
+
+    const newAd = new AdItem({
+      title: req.body.title || req.file.originalname,
+      filePath,
+      duration
+    });
+
+    await newAd.save();
+
+    // Automatically play this ad immediately
+    let adState = await AdState.findOne();
+    if (!adState) {
+      adState = new AdState({ totalAdTimeOffset: 0 });
+    }
+
+    adState.activeAd = {
+      title: newAd.title,
+      filePath: newAd.filePath,
+      duration: newAd.duration,
+      startedAt: new Date()
+    };
+
+    await adState.save();
+
+    // Notify clients
+    const updatedAds = await AdItem.find().sort({ createdAt: -1 });
+    if (req.app.get('io')) {
+      req.app.get('io').emit('ads_updated', updatedAds);
+    }
+
+    res.status(201).json(newAd);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Play an existing ad immediately
+router.post('/ads/:id/play', async (req, res) => {
+  try {
+    const ad = await AdItem.findById(req.params.id);
+    if (!ad) {
+      return res.status(404).json({ error: 'Ad not found' });
+    }
+
+    let adState = await AdState.findOne();
+    if (!adState) {
+      adState = new AdState({ totalAdTimeOffset: 0 });
+    }
+
+    // If there's already an active ad, transition it (add to offset)
+    if (adState.activeAd) {
+      const elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
+      if (elapsed < adState.activeAd.duration) {
+        adState.totalAdTimeOffset += elapsed;
+      } else {
+        adState.totalAdTimeOffset += adState.activeAd.duration;
+      }
+    }
+
+    adState.activeAd = {
+      title: ad.title,
+      filePath: ad.filePath,
+      duration: ad.duration,
+      startedAt: new Date()
+    };
+
+    await adState.save();
+    res.json({ message: 'Ad playback started', activeAd: adState.activeAd });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Stop current ad
+router.post('/ads/stop', async (req, res) => {
+  try {
+    let adState = await AdState.findOne();
+    if (adState && adState.activeAd) {
+      const elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
+      if (elapsed < adState.activeAd.duration) {
+        adState.totalAdTimeOffset += elapsed;
+      } else {
+        adState.totalAdTimeOffset += adState.activeAd.duration;
+      }
+      adState.activeAd = null;
+      await adState.save();
+    }
+    res.json({ message: 'Ad playout stopped' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete an ad item
+router.delete('/ads/:id', async (req, res) => {
+  try {
+    const ad = await AdItem.findById(req.params.id);
+    if (!ad) {
+      return res.status(404).json({ error: 'Ad not found' });
+    }
+
+    const fullPath = path.join(__dirname, '..', ad.filePath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+
+    await AdItem.findByIdAndDelete(req.params.id);
+
+    // Notify clients
+    const updatedAds = await AdItem.find().sort({ createdAt: -1 });
+    if (req.app.get('io')) {
+      req.app.get('io').emit('ads_updated', updatedAds);
+    }
+
+    res.json({ message: 'Ad deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
