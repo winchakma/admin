@@ -14,7 +14,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://iptv-broadcast-backend.onrender.com'; // Dynamic backend fallback
+const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://iptv-broadcast-backend.onrender.com';
 
 function App() {
   const [activeTab, setActiveTab] = useState('admin');
@@ -50,7 +50,20 @@ function App() {
   });
 
   const [uploadTitle, setUploadTitle] = useState('');
+  const [currentTimeStr, setCurrentTimeStr] = useState('');
+  const [currentDateStr, setCurrentDateStr] = useState('');
   const socketRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
+
+  // Live time and date updater
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const d = new Date();
+      setCurrentTimeStr(d.toLocaleTimeString());
+      setCurrentDateStr(d.toLocaleDateString());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Connect Socket.io
   useEffect(() => {
@@ -104,20 +117,31 @@ function App() {
     }
   };
 
-  // Immediate state update & background save
-  const updateOverlayField = (updates) => {
-    // 1. Update React state immediately for instant visual response
+  // Immediate state update & DEBOUNCED background save
+  const updateOverlayField = (updates, debounce = false) => {
+    // 1. Update React state immediately (always synchronous and instant)
     setOverlays(prev => ({
       ...prev,
       ...updates
     }));
 
-    // 2. Background API save call
+    // 2. Handle background API save
+    if (debounce) {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        saveConfigToBackend(updates);
+      }, 1000); // 1 second debounce to prevent network flood during typing
+    } else {
+      saveConfigToBackend(updates);
+    }
+  };
+
+  const saveConfigToBackend = (updates) => {
     fetch(`${SOCKET_URL}/api/overlays`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updates)
-    }).catch(err => console.warn('Overlay config background-save offline'));
+    }).catch(err => console.warn('Overlay background save offline'));
   };
 
   const handleVideoUpload = async (e) => {
@@ -128,7 +152,7 @@ function App() {
     formData.append('video', file);
     formData.append('title', uploadTitle || file.name);
 
-    // Optimistic UI insert
+    // Optimistic insert
     const tempItem = {
       _id: Date.now().toString(),
       title: uploadTitle || file.name,
@@ -147,18 +171,16 @@ function App() {
       const newItem = await res.json();
       setPlaylist(prev => prev.map(item => item._id === tempItem._id ? newItem : item));
     } catch (err) {
-      console.warn('Upload failed, retaining mock visual in list');
+      console.warn('Upload failed, retaining local item');
     }
   };
 
   const handleRemoveVideo = async (id) => {
-    // Optimistic UI delete
     setPlaylist(playlist.filter(item => item._id !== id));
-    
     try {
       await fetch(`${SOCKET_URL}/api/playlist/${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('Delete failed, local UI remains cleaned');
+      console.warn('Delete failed, local UI cleaned');
     }
   };
 
@@ -169,7 +191,6 @@ function App() {
     const formData = new FormData();
     formData.append('image', file);
 
-    // Visual placeholder preview for local testing/offline
     const reader = new FileReader();
     reader.onload = () => {
       updateOverlayField({ otsImagePath: reader.result, otsActive: true });
@@ -229,7 +250,7 @@ function App() {
           <h2 className="text-2xl font-black text-slate-800 tracking-wider">IPTV STREAM CONTROL CENTER</h2>
           <button 
             onClick={() => setActiveTab(activeTab === 'admin' ? 'public' : 'admin')} 
-            className="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm tracking-wide shadow-md transition-all"
+            className="px-5 py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-sm tracking-wide shadow-md transition-all animate-pulse"
           >
             {activeTab === 'admin' ? 'Go to Public Viewer Page' : 'Return to Admin Panel'}
           </button>
@@ -260,7 +281,7 @@ function App() {
                   </div>
 
                   {/* OTS Overlay rendering in live preview */}
-                  {overlays.otsActive && (overlays.otsImagePath || overlays.otsActive) && (
+                  {overlays.otsActive && (
                     <div className="absolute right-3 bottom-12 w-16 h-16 bg-[#B3B3B3] rounded border border-white/40 flex items-center justify-center p-1 text-[8px] font-bold font-mono text-slate-800 text-center uppercase shadow overflow-hidden">
                       {overlays.otsImagePath ? (
                         <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
@@ -270,24 +291,24 @@ function App() {
                     </div>
                   )}
 
-                  {/* Overlay text banner */}
+                  {/* Overlay text banner with right-to-left scrolling marquee */}
                   <div className="w-full mt-auto flex flex-col gap-1 text-[7px] font-bold text-slate-900 select-none">
                     {overlays.ticker1Active && (
-                      <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono">
-                        <div className="flex gap-2">
+                      <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono items-center overflow-hidden">
+                        <div className="flex gap-2 flex-1 min-w-0 mr-4">
                           <span>{overlays.ticker1Title}:</span>
-                          <span className="font-normal">{overlays.ticker1Text}</span>
+                          <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
                         </div>
-                        {overlays.showTime && <span>Time</span>}
+                        {overlays.showTime && <span className="shrink-0">{currentTimeStr || 'Time'}</span>}
                       </div>
                     )}
                     {overlays.ticker2Active && (
-                      <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono">
-                        <div className="flex gap-2">
+                      <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono items-center overflow-hidden">
+                        <div className="flex gap-2 flex-1 min-w-0 mr-4">
                           <span>{overlays.ticker2Title}:</span>
-                          <span className="font-normal">{overlays.ticker2Text}</span>
+                          <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                         </div>
-                        {overlays.showDate && <span>Date</span>}
+                        {overlays.showDate && <span className="shrink-0">{currentDateStr || 'Date'}</span>}
                       </div>
                     )}
                   </div>
@@ -330,15 +351,15 @@ function App() {
                   <input 
                     type="text" 
                     placeholder="Title Card" 
-                    value={overlays.ticker1Title} 
-                    onChange={(e) => updateOverlayField({ ticker1Title: e.target.value })}
+                    value={overlays.ticker1Title || ''} 
+                    onChange={(e) => updateOverlayField({ ticker1Title: e.target.value }, true)}
                     className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
-                    value={overlays.ticker1Text} 
-                    onChange={(e) => updateOverlayField({ ticker1Text: e.target.value })}
+                    value={overlays.ticker1Text || ''} 
+                    onChange={(e) => updateOverlayField({ ticker1Text: e.target.value }, true)}
                     className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
                   />
                   <button 
@@ -355,15 +376,15 @@ function App() {
                   <input 
                     type="text" 
                     placeholder="Title Card" 
-                    value={overlays.ticker2Title} 
-                    onChange={(e) => updateOverlayField({ ticker2Title: e.target.value })}
+                    value={overlays.ticker2Title || ''} 
+                    onChange={(e) => updateOverlayField({ ticker2Title: e.target.value }, true)}
                     className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
-                    value={overlays.ticker2Text} 
-                    onChange={(e) => updateOverlayField({ ticker2Text: e.target.value })}
+                    value={overlays.ticker2Text || ''} 
+                    onChange={(e) => updateOverlayField({ ticker2Text: e.target.value }, true)}
                     className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888]"
                   />
                   <button 
@@ -521,20 +542,24 @@ function App() {
                   </div>
                 )}
 
-                {/* Overlay text banners */}
-                <div className="w-full mt-auto flex flex-col gap-2 font-bold text-slate-900 text-xs select-none">
+                {/* Overlay text banners with scrolling marquee */}
+                <div className="w-full mt-auto flex flex-col gap-2 font-bold text-slate-905 text-xs select-none">
                   {overlays.ticker1Active && (
-                    <div className="w-full bg-slate-950/80 text-white px-4 py-2 rounded-lg border-l-4 border-[#50BF7B] flex justify-between items-center shadow-lg font-mono">
-                      <span>{overlays.ticker1Title}:</span>
-                      <span className="font-normal flex-1 mx-4 truncate">{overlays.ticker1Text}</span>
-                      {overlays.showTime && <span className="text-emerald-400 font-bold shrink-0">{new Date().toLocaleTimeString()}</span>}
+                    <div className="w-full bg-slate-950/80 text-white px-4 py-2 rounded-lg border-l-4 border-[#50BF7B] flex justify-between items-center shadow-lg font-mono overflow-hidden">
+                      <div className="flex gap-2 flex-1 min-w-0 mr-4">
+                        <span>{overlays.ticker1Title}:</span>
+                        <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
+                      </div>
+                      {overlays.showTime && <span className="text-emerald-400 font-bold shrink-0">{currentTimeStr}</span>}
                     </div>
                   )}
                   {overlays.ticker2Active && (
-                    <div className="w-full bg-slate-950/80 text-white px-4 py-2 rounded-lg border-l-4 border-[#C92C2C] flex justify-between items-center shadow-lg font-mono">
-                      <span>{overlays.ticker2Title}:</span>
-                      <span className="font-normal flex-1 mx-4 truncate">{overlays.ticker2Text}</span>
-                      {overlays.showDate && <span className="text-emerald-400 font-bold shrink-0">{new Date().toLocaleDateString()}</span>}
+                    <div className="w-full bg-slate-950/80 text-white px-4 py-2 rounded-lg border-l-4 border-[#C92C2C] flex justify-between items-center shadow-lg font-mono overflow-hidden">
+                      <div className="flex gap-2 flex-1 min-w-0 mr-4">
+                        <span>{overlays.ticker2Title}:</span>
+                        <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                      </div>
+                      {overlays.showDate && <span className="text-emerald-400 font-bold shrink-0">{currentDateStr}</span>}
                     </div>
                   )}
                 </div>
@@ -545,7 +570,7 @@ function App() {
                 <span className="text-sm font-bold text-slate-300">Live Linear Broadcast (24/7 View Mode)</span>
                 <button 
                   onClick={() => setActiveTab('admin')} 
-                  className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded text-xs font-bold text-white transition-all"
+                  className="px-4 py-1.5 bg-[#5367B5] hover:bg-[#46579E] rounded text-xs font-bold text-white transition-all"
                 >
                   Return to Dashboard
                 </button>
