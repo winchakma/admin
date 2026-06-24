@@ -416,41 +416,58 @@ function App() {
                     </button>
                   )}
 
-                  <div className="px-2 py-1 bg-slate-900/60 rounded text-[9px] font-bold text-white self-start z-20">
+                  <div className="absolute top-2.5 left-2.5 bg-[#AFAFAF] border border-[#969696] text-black font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20">
                     Logo
                   </div>
 
-                  {/* OTS Overlay - TRANSPARENT BACKGROUND (No border/bg) */}
+                  {/* OTS Overlay */}
                   {overlays.otsActive && overlays.otsImagePath && (
-                    <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center p-0 overflow-hidden bg-transparent z-20">
-                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                    <div className="absolute right-2.5 bottom-[42px] w-9 h-9 sm:w-11 sm:h-11 bg-[#AFAFAF] border border-[#969696] flex items-center justify-center p-1 rounded z-20 shadow-md">
+                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                     </div>
                   )}
 
-                  {/* Overlay text banners */}
-                  <div className="w-full mt-auto flex flex-col gap-1 text-[7px] font-bold text-slate-900 select-none z-20">
+                  {/* Tickers & Time/Date Aligned Bottom Rows */}
+                  <div className="absolute bottom-1 left-1 right-1 flex flex-col gap-0.5 z-20 text-[6px] sm:text-[8px] font-bold text-black select-none">
+                    {/* Row 1 (Ticker 1 & Time) */}
                     {overlays.ticker1Active && (
-                      <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono items-center overflow-hidden">
-                        <div className="flex gap-2 flex-1 min-w-0 mr-4">
-                          <span>{overlays.ticker1Title}:</span>
-                          <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
+                      <div className="flex gap-0.5 w-full">
+                        {/* Ticker 1 Title */}
+                        <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
+                          {overlays.ticker1Title}
                         </div>
+                        {/* Ticker 1 Text */}
+                        <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-1.5 py-0.5 flex items-center overflow-hidden">
+                          <marquee className="font-normal flex-1" scrollamount="1.5">{overlays.ticker1Text}</marquee>
+                        </div>
+                        {/* Time */}
+                        {overlays.showTime && (
+                          <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
+                            {currentTimeStr || 'Time'}
+                          </div>
+                        )}
                       </div>
                     )}
-                    {overlays.ticker2Active && (
-                      <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono items-center overflow-hidden">
-                        <div className="flex gap-2 flex-1 min-w-0 mr-4">
-                          <span>{overlays.ticker2Title}:</span>
-                          <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
-                        </div>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Floating Time and Date display box (Independent of tickers) */}
-                  <div className="absolute right-3.5 top-10 flex flex-col gap-1 text-[8px] font-bold font-mono text-slate-800 bg-slate-950/10 px-2 py-1 rounded select-none text-right z-20">
-                    {overlays.showTime && <div>{currentTimeStr || 'Time'}</div>}
-                    {overlays.showDate && <div>{currentDateStr || 'Date'}</div>}
+                    {/* Row 2 (Ticker 2 & Date) */}
+                    {overlays.ticker2Active && (
+                      <div className="flex gap-0.5 w-full">
+                        {/* Ticker 2 Title */}
+                        <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
+                          {overlays.ticker2Title}
+                        </div>
+                        {/* Ticker 2 Text */}
+                        <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-1.5 py-0.5 flex items-center overflow-hidden">
+                          <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker2Text}</marquee>
+                        </div>
+                        {/* Date */}
+                        {overlays.showDate && (
+                          <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
+                            {currentDateStr || 'Date'}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -714,41 +731,58 @@ function App() {
                 )}
 
                 {/* Site Logo */}
-                <div className="px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-900/60 rounded text-[10px] sm:text-xs font-bold text-white self-start z-20">
+                <div className="absolute top-4 left-4 bg-[#AFAFAF] border border-[#969696] text-black font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20">
                   Logo
                 </div>
 
-                {/* OTS graphic overlay in public player - TRANSPARENT BACKGROUND (No border/bg) */}
+                {/* OTS graphic overlay in public player */}
                 {overlays.otsActive && overlays.otsImagePath && (
-                  <div className="absolute right-4 bottom-14 sm:right-6 sm:bottom-16 w-24 sm:w-36 aspect-square flex items-center justify-center overflow-hidden bg-transparent z-20">
-                    <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                  <div className="absolute right-4 bottom-24 w-16 h-16 sm:w-24 sm:h-24 bg-[#AFAFAF] border border-[#969696] flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
+                    <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
 
-                {/* Overlay text banners with scrolling marquee */}
-                <div className="w-full mt-auto flex flex-col gap-1.5 sm:gap-2 font-bold text-slate-900 text-[10px] sm:text-xs select-none z-20">
+                {/* Tickers & Time/Date Aligned Bottom Rows */}
+                <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 z-20 text-[9px] sm:text-xs font-bold text-black select-none">
+                  {/* Row 1 (Ticker 1 & Time) */}
                   {overlays.ticker1Active && (
-                    <div className="w-full bg-slate-950/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border-l-4 border-[#50BF7B] flex justify-between items-center shadow-lg font-mono overflow-hidden">
-                      <div className="flex gap-2 flex-1 min-w-0 mr-4">
-                        <span>{overlays.ticker1Title}:</span>
-                        <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
+                    <div className="flex gap-1 w-full shadow-md">
+                      {/* Ticker 1 Title */}
+                      <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-l min-w-[80px] sm:min-w-[110px] text-center flex items-center justify-center uppercase tracking-wide">
+                        {overlays.ticker1Title}
                       </div>
+                      {/* Ticker 1 Text */}
+                      <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-3 py-1.5 flex items-center overflow-hidden">
+                        <marquee className="font-normal flex-1 text-slate-800" scrollamount="2">{overlays.ticker1Text}</marquee>
+                      </div>
+                      {/* Time */}
+                      {overlays.showTime && (
+                        <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
+                          {currentTimeStr}
+                        </div>
+                      )}
                     </div>
                   )}
-                  {overlays.ticker2Active && (
-                    <div className="w-full bg-slate-950/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border-l-4 border-[#C92C2C] flex justify-between items-center shadow-lg font-mono overflow-hidden">
-                      <div className="flex gap-2 flex-1 min-w-0 mr-4">
-                        <span>{overlays.ticker2Title}:</span>
-                        <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
-                {/* Floating Time and Date display box (Independent of tickers) */}
-                <div className="absolute right-4 top-14 sm:right-6 sm:top-16 flex flex-col gap-1 text-[10px] sm:text-xs font-bold font-mono text-white bg-slate-950/80 px-3 py-1.5 rounded-md shadow-md select-none text-right z-20">
-                  {overlays.showTime && <div>{currentTimeStr}</div>}
-                  {overlays.showDate && <div>{currentDateStr}</div>}
+                  {/* Row 2 (Ticker 2 & Date) */}
+                  {overlays.ticker2Active && (
+                    <div className="flex gap-1 w-full shadow-md">
+                      {/* Ticker 2 Title */}
+                      <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-l min-w-[80px] sm:min-w-[110px] text-center flex items-center justify-center uppercase tracking-wide">
+                        {overlays.ticker2Title}
+                      </div>
+                      {/* Ticker 2 Text */}
+                      <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-3 py-1.5 flex items-center overflow-hidden">
+                        <marquee className="font-normal flex-1 text-slate-800" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                      </div>
+                      {/* Date */}
+                      {overlays.showDate && (
+                        <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
+                          {currentDateStr}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
               </div>
