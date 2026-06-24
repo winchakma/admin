@@ -70,6 +70,8 @@ function App() {
       const month = (d.getMonth() + 1).toString().padStart(2, '0');
       const year = d.getFullYear();
       setCurrentDateStr(`${day}/${month}/${year}`);
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // Video playback syncing effect
