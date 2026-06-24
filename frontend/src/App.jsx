@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
+import Hls from 'hls.js';
 import { 
   Upload, 
   Settings, 
@@ -19,6 +20,12 @@ const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:
 function App() {
   const [activeTab, setActiveTab] = useState('admin');
   const [playlist, setPlaylist] = useState([]);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const previewVideoRef = useRef(null);
+  const publicVideoRef = useRef(null);
+  const previewHlsRef = useRef(null);
+  const publicHlsRef = useRef(null);
   
   const [overlays, setOverlays] = useState({
     ticker1Text: 'Headline Text',
@@ -63,9 +70,81 @@ function App() {
       const month = (d.getMonth() + 1).toString().padStart(2, '0');
       const year = d.getFullYear();
       setCurrentDateStr(`${day}/${month}/${year}`);
-    }, 1000);
-    return () => clearInterval(timer);
   }, []);
+
+  // Video playback syncing effect
+  useEffect(() => {
+    if (!status.activeVideo) {
+      if (previewVideoRef.current) previewVideoRef.current.src = '';
+      if (publicVideoRef.current) publicVideoRef.current.src = '';
+      return;
+    }
+
+    const videoUrl = status.activeVideo.filePath.startsWith('http://') || status.activeVideo.filePath.startsWith('https://')
+      ? status.activeVideo.filePath
+      : `${SOCKET_URL}/${status.activeVideo.filePath}`;
+
+    const setupPlayer = (videoEl, hlsRef) => {
+      if (!videoEl) return;
+
+      const isHls = videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8');
+
+      if (isHls) {
+        if (Hls.isSupported()) {
+          if (hlsRef.current) {
+            hlsRef.current.destroy();
+          }
+          const hls = new Hls();
+          hlsRef.current = hls;
+          hls.loadSource(videoUrl);
+          hls.attachMedia(videoEl);
+          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            if (status.activeVideo.offset) {
+              videoEl.currentTime = status.activeVideo.offset;
+            }
+            videoEl.play().catch(e => console.log("Autoplay blocked:", e));
+          });
+        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+          videoEl.src = videoUrl;
+          videoEl.addEventListener('loadedmetadata', () => {
+            if (status.activeVideo.offset) {
+              videoEl.currentTime = status.activeVideo.offset;
+            }
+            videoEl.play().catch(e => console.log("Autoplay blocked:", e));
+          });
+        }
+      } else {
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
+        if (videoEl.src !== videoUrl) {
+          videoEl.src = videoUrl;
+        }
+        
+        const currentDiff = Math.abs(videoEl.currentTime - status.activeVideo.offset);
+        if (currentDiff > 3) {
+          videoEl.currentTime = status.activeVideo.offset;
+        }
+        
+        videoEl.play().catch(e => console.log("Autoplay blocked:", e));
+      }
+    };
+
+    setupPlayer(previewVideoRef.current, previewHlsRef);
+    setupPlayer(publicVideoRef.current, publicHlsRef);
+
+  }, [status.activeVideo?.id, status.activeVideo?.filePath]);
+
+  const handlePlayUnmute = () => {
+    setIsMuted(false);
+    if (previewVideoRef.current) {
+      previewVideoRef.current.play().catch(err => console.log(err));
+    }
+    if (publicVideoRef.current) {
+      publicVideoRef.current.play().catch(err => console.log(err));
+    }
+  };
 
   // Connect Socket.io
   useEffect(() => {
@@ -315,20 +394,44 @@ function App() {
                 </div>
 
                 {/* Simulated screen box */}
-                <div className="aspect-video w-full bg-[#66DE93] rounded-lg border border-[#50BF7B] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
-                  <div className="px-2 py-1 bg-slate-900/60 rounded text-[9px] font-bold text-white self-start">
+                <div className="aspect-video w-full bg-black rounded-lg border border-[#50BF7B] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
+                  {status.activeVideo ? (
+                    <video 
+                      ref={previewVideoRef} 
+                      className="absolute inset-0 w-full h-full object-cover z-0" 
+                      playsInline 
+                      muted={isMuted}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[#66DE93] z-0" />
+                  )}
+
+                  {/* Play/Unmute Button overlay */}
+                  {isMuted && status.activeVideo && (
+                    <button 
+                      onClick={handlePlayUnmute}
+                      className="absolute inset-0 w-full h-full bg-black/40 flex flex-col items-center justify-center gap-2 text-white font-bold text-xs transition-all hover:bg-black/50 z-10 cursor-pointer"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-[#5367B5] flex items-center justify-center shadow-lg">
+                        <Play className="w-6 h-6 fill-white text-white ml-1" />
+                      </div>
+                      <span>Click to Play / Unmute Preview</span>
+                    </button>
+                  )}
+
+                  <div className="px-2 py-1 bg-slate-900/60 rounded text-[9px] font-bold text-white self-start z-20">
                     Logo
                   </div>
 
                   {/* OTS Overlay - TRANSPARENT BACKGROUND (No border/bg) */}
                   {overlays.otsActive && overlays.otsImagePath && (
-                    <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center p-0 overflow-hidden bg-transparent">
+                    <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center p-0 overflow-hidden bg-transparent z-20">
                       <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                     </div>
                   )}
 
                   {/* Overlay text banners */}
-                  <div className="w-full mt-auto flex flex-col gap-1 text-[7px] font-bold text-slate-900 select-none">
+                  <div className="w-full mt-auto flex flex-col gap-1 text-[7px] font-bold text-slate-900 select-none z-20">
                     {overlays.ticker1Active && (
                       <div className="w-full border-t border-slate-700/30 flex justify-between py-1 bg-slate-900/10 px-2 font-mono items-center overflow-hidden">
                         <div className="flex gap-2 flex-1 min-w-0 mr-4">
@@ -348,7 +451,7 @@ function App() {
                   </div>
 
                   {/* Floating Time and Date display box (Independent of tickers) */}
-                  <div className="absolute right-3.5 top-10 flex flex-col gap-1 text-[8px] font-bold font-mono text-slate-800 bg-slate-950/10 px-2 py-1 rounded select-none text-right">
+                  <div className="absolute right-3.5 top-10 flex flex-col gap-1 text-[8px] font-bold font-mono text-slate-800 bg-slate-950/10 px-2 py-1 rounded select-none text-right z-20">
                     {overlays.showTime && <div>{currentTimeStr || 'Time'}</div>}
                     {overlays.showDate && <div>{currentDateStr || 'Date'}</div>}
                   </div>
@@ -588,22 +691,45 @@ function App() {
           /* VIEWER MODE */
           <div className="flex flex-col items-center justify-center p-2 sm:p-8 bg-slate-900 min-h-[60vh] sm:min-h-[80vh] rounded-2xl border border-slate-800 max-w-7xl w-full mx-auto">
             <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl relative">
-              <div className="aspect-video w-full bg-[#66DE93] relative overflow-hidden flex flex-col justify-between p-4 sm:p-6">
-                
+              <div className="aspect-video w-full bg-black relative overflow-hidden flex flex-col justify-between p-4 sm:p-6">
+                {status.activeVideo ? (
+                  <video 
+                    ref={publicVideoRef} 
+                    className="absolute inset-0 w-full h-full object-cover z-0" 
+                    playsInline 
+                    muted={isMuted}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[#66DE93] z-0" />
+                )}
+
+                {/* Play/Unmute Button overlay */}
+                {isMuted && status.activeVideo && (
+                  <button 
+                    onClick={handlePlayUnmute}
+                    className="absolute inset-0 w-full h-full bg-black/60 flex flex-col items-center justify-center gap-3 text-white font-bold text-sm transition-all hover:bg-black/75 z-10 cursor-pointer"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-[#5367B5] flex items-center justify-center shadow-2xl">
+                      <Play className="w-8 h-8 fill-white text-white ml-1.5" />
+                    </div>
+                    <span>Click to Unmute / Play Linear Stream</span>
+                  </button>
+                )}
+
                 {/* Site Logo */}
-                <div className="px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-900/60 rounded text-[10px] sm:text-xs font-bold text-white self-start">
+                <div className="px-2 py-1 sm:px-3 sm:py-1.5 bg-slate-900/60 rounded text-[10px] sm:text-xs font-bold text-white self-start z-20">
                   Logo
                 </div>
 
                 {/* OTS graphic overlay in public player - TRANSPARENT BACKGROUND (No border/bg) */}
                 {overlays.otsActive && overlays.otsImagePath && (
-                  <div className="absolute right-4 bottom-14 sm:right-6 sm:bottom-16 w-24 sm:w-36 aspect-square flex items-center justify-center overflow-hidden bg-transparent">
+                  <div className="absolute right-4 bottom-14 sm:right-6 sm:bottom-16 w-24 sm:w-36 aspect-square flex items-center justify-center overflow-hidden bg-transparent z-20">
                     <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
 
                 {/* Overlay text banners with scrolling marquee */}
-                <div className="w-full mt-auto flex flex-col gap-1.5 sm:gap-2 font-bold text-slate-900 text-[10px] sm:text-xs select-none">
+                <div className="w-full mt-auto flex flex-col gap-1.5 sm:gap-2 font-bold text-slate-900 text-[10px] sm:text-xs select-none z-20">
                   {overlays.ticker1Active && (
                     <div className="w-full bg-slate-950/80 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border-l-4 border-[#50BF7B] flex justify-between items-center shadow-lg font-mono overflow-hidden">
                       <div className="flex gap-2 flex-1 min-w-0 mr-4">
@@ -623,7 +749,7 @@ function App() {
                 </div>
 
                 {/* Floating Time and Date display box (Independent of tickers) */}
-                <div className="absolute right-4 top-14 sm:right-6 sm:top-16 flex flex-col gap-1 text-[10px] sm:text-xs font-bold font-mono text-white bg-slate-950/80 px-3 py-1.5 rounded-md shadow-md select-none text-right">
+                <div className="absolute right-4 top-14 sm:right-6 sm:top-16 flex flex-col gap-1 text-[10px] sm:text-xs font-bold font-mono text-white bg-slate-950/80 px-3 py-1.5 rounded-md shadow-md select-none text-right z-20">
                   {overlays.showTime && <div>{currentTimeStr}</div>}
                   {overlays.showDate && <div>{currentDateStr}</div>}
                 </div>
