@@ -29,11 +29,17 @@ const startScheduler = (io) => {
       if (!adState) {
         adState = new AdState({ totalAdTimeOffset: 0 });
         await adState.save();
+      } else if (typeof adState.totalAdTimeOffset !== 'number' || isNaN(adState.totalAdTimeOffset)) {
+        adState.totalAdTimeOffset = 0;
+        await adState.save();
       }
 
       // Check if an ad is currently playing
-      if (adState.activeAd) {
-        const elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
+      if (adState.activeAd && adState.activeAd.startedAt) {
+        let elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
+        if (isNaN(elapsed) || elapsed < 0) {
+          elapsed = 0;
+        }
         if (elapsed < adState.activeAd.duration) {
           currentStatus.isPlaying = true;
           currentStatus.activeVideo = {
@@ -54,7 +60,8 @@ const startScheduler = (io) => {
           return;
         } else {
           // Ad has finished playing, transition back to regular playlist
-          adState.totalAdTimeOffset += adState.activeAd.duration;
+          const adDuration = typeof adState.activeAd.duration === 'number' && !isNaN(adState.activeAd.duration) ? adState.activeAd.duration : 0;
+          adState.totalAdTimeOffset = (adState.totalAdTimeOffset || 0) + adDuration;
           adState.activeAd = null;
           await adState.save();
         }
@@ -71,7 +78,7 @@ const startScheduler = (io) => {
       // Calculate total duration
       const totalDuration = playlist.reduce((sum, item) => sum + item.duration, 0);
       const now = Date.now();
-      const adjustedNow = (now / 1000) - adState.totalAdTimeOffset;
+      const adjustedNow = (now / 1000) - (adState.totalAdTimeOffset || 0);
       const currentCycleTime = adjustedNow % totalDuration;
 
       let accumulatedTime = 0;

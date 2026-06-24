@@ -310,13 +310,16 @@ router.post('/ads/:id/play', async (req, res) => {
       adState = new AdState({ totalAdTimeOffset: 0 });
     }
 
-    // If there's already an active ad, transition it (add to offset)
-    if (adState.activeAd) {
-      const elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
-      if (elapsed < adState.activeAd.duration) {
-        adState.totalAdTimeOffset += elapsed;
+     // If there's already an active ad, transition it (add to offset)
+    if (adState.activeAd && adState.activeAd.startedAt) {
+      let elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
+      if (isNaN(elapsed) || elapsed < 0) elapsed = 0;
+      const currentOffset = typeof adState.totalAdTimeOffset === 'number' && !isNaN(adState.totalAdTimeOffset) ? adState.totalAdTimeOffset : 0;
+      const adDuration = typeof adState.activeAd.duration === 'number' && !isNaN(adState.activeAd.duration) ? adState.activeAd.duration : 0;
+      if (elapsed < adDuration) {
+        adState.totalAdTimeOffset = currentOffset + elapsed;
       } else {
-        adState.totalAdTimeOffset += adState.activeAd.duration;
+        adState.totalAdTimeOffset = currentOffset + adDuration;
       }
     }
 
@@ -338,12 +341,15 @@ router.post('/ads/:id/play', async (req, res) => {
 router.post('/ads/stop', async (req, res) => {
   try {
     let adState = await AdState.findOne();
-    if (adState && adState.activeAd) {
-      const elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
-      if (elapsed < adState.activeAd.duration) {
-        adState.totalAdTimeOffset += elapsed;
+    if (adState && adState.activeAd && adState.activeAd.startedAt) {
+      let elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
+      if (isNaN(elapsed) || elapsed < 0) elapsed = 0;
+      const currentOffset = typeof adState.totalAdTimeOffset === 'number' && !isNaN(adState.totalAdTimeOffset) ? adState.totalAdTimeOffset : 0;
+      const adDuration = typeof adState.activeAd.duration === 'number' && !isNaN(adState.activeAd.duration) ? adState.activeAd.duration : 0;
+      if (elapsed < adDuration) {
+        adState.totalAdTimeOffset = currentOffset + elapsed;
       } else {
-        adState.totalAdTimeOffset += adState.activeAd.duration;
+        adState.totalAdTimeOffset = currentOffset + adDuration;
       }
       adState.activeAd = null;
       await adState.save();
