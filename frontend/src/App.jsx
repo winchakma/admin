@@ -14,26 +14,17 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://iptv-broadcast-backend.onrender.com';
+const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
 
 function App() {
   const [activeTab, setActiveTab] = useState('admin');
-  const [playlist, setPlaylist] = useState([
-    { _id: '1', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 0 },
-    { _id: '2', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 1 },
-    { _id: '3', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 2 },
-    { _id: '4', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 3 },
-    { _id: '5', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 4 },
-    { _id: '6', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 5 },
-    { _id: '7', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 6 },
-    { _id: '8', title: 'Video Title', duration: 44626, status: 'active', orderIndex: 7 }
-  ]);
+  const [playlist, setPlaylist] = useState([]);
   
   const [overlays, setOverlays] = useState({
-    ticker1Text: 'Headline News 1',
+    ticker1Text: 'Headline Text',
     ticker1Title: 'Title Card',
     ticker1Active: false,
-    ticker2Text: 'Headline News 2',
+    ticker2Text: 'Headline Text',
     ticker2Title: 'Title Card',
     ticker2Active: false,
     otsImagePath: '',
@@ -50,6 +41,7 @@ function App() {
   });
 
   const [uploadTitle, setUploadTitle] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [currentDateStr, setCurrentDateStr] = useState('');
   const socketRef = useRef(null);
@@ -59,8 +51,18 @@ function App() {
   useEffect(() => {
     const timer = setInterval(() => {
       const d = new Date();
-      setCurrentTimeStr(d.toLocaleTimeString());
-      setCurrentDateStr(d.toLocaleDateString());
+      
+      // Format time as hh:mm:ss
+      const hours = d.getHours().toString().padStart(2, '0');
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      const seconds = d.getSeconds().toString().padStart(2, '0');
+      setCurrentTimeStr(`${hours}:${minutes}:${seconds}`);
+
+      // Format date as DD/MM/YYYY
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear();
+      setCurrentDateStr(`${day}/${month}/${year}`);
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -97,11 +99,9 @@ function App() {
     try {
       const res = await fetch(`${SOCKET_URL}/api/playlist`);
       const data = await res.json();
-      if (data && data.length > 0) {
-        setPlaylist(data);
-      }
+      setPlaylist(data);
     } catch (e) {
-      console.warn('API Offline, using mock playlist data');
+      console.warn('API Offline, using local data');
     }
   };
 
@@ -113,21 +113,24 @@ function App() {
         setOverlays(prev => ({ ...prev, ...data }));
       }
     } catch (e) {
-      console.warn('API Offline, using mock overlay config');
+      console.warn('API Offline, using local overlay config');
     }
   };
 
+  // Immediate state update & DEBOUNCED background save
   const updateOverlayField = (updates, debounce = false) => {
+    // 1. Update React state immediately (always synchronous and instant)
     setOverlays(prev => ({
       ...prev,
       ...updates
     }));
 
+    // 2. Handle background API save
     if (debounce) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = setTimeout(() => {
         saveConfigToBackend(updates);
-      }, 1000);
+      }, 1000); // 1 second debounce
     } else {
       saveConfigToBackend(updates);
     }
@@ -141,6 +144,7 @@ function App() {
     }).catch(err => console.warn('Overlay background save offline'));
   };
 
+  // Video file upload
   const handleVideoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -149,34 +153,51 @@ function App() {
     formData.append('video', file);
     formData.append('title', uploadTitle || file.name);
 
-    const tempItem = {
-      _id: Date.now().toString(),
-      title: uploadTitle || file.name,
-      duration: 30,
-      status: 'active',
-      orderIndex: playlist.length
-    };
-    setPlaylist([...playlist, tempItem]);
-    setUploadTitle('');
-
     try {
       const res = await fetch(`${SOCKET_URL}/api/playlist/upload`, {
         method: 'POST',
         body: formData
       });
       const newItem = await res.json();
-      setPlaylist(prev => prev.map(item => item._id === tempItem._id ? newItem : item));
+      setPlaylist(prev => [...prev, newItem]);
+      setUploadTitle('');
     } catch (err) {
-      console.warn('Upload failed, retaining local item');
+      console.warn('Upload failed');
+    }
+  };
+
+  // External live link upload
+  const handleAddExternalLink = async () => {
+    if (!externalUrl) return;
+
+    try {
+      const res = await fetch(`${SOCKET_URL}/api/playlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: uploadTitle || 'External Live Stream',
+          videoUrl: externalUrl,
+          duration: 3600, // Default duration for live streams (1 hour)
+          orderIndex: playlist.length,
+          status: 'active'
+        })
+      });
+      const newItem = await res.json();
+      setPlaylist(prev => [...prev, newItem]);
+      setExternalUrl('');
+      setUploadTitle('');
+    } catch (err) {
+      console.warn('Failed to add external stream link');
     }
   };
 
   const handleRemoveVideo = async (id) => {
+    // Optimistic UI delete
     setPlaylist(playlist.filter(item => item._id !== id));
     try {
       await fetch(`${SOCKET_URL}/api/playlist/${id}`, { method: 'DELETE' });
     } catch (err) {
-      console.warn('Delete failed, local UI cleaned');
+      console.warn('Delete failed');
     }
   };
 
@@ -199,7 +220,7 @@ function App() {
         body: formData
       });
     } catch (err) {
-      console.warn('OTS Image upload failed, keeping local preview');
+      console.warn('OTS Image upload failed');
     }
   };
 
@@ -300,13 +321,9 @@ function App() {
                   </div>
 
                   {/* OTS Overlay - TRANSPARENT BACKGROUND (No border/bg) */}
-                  {overlays.otsActive && (
+                  {overlays.otsActive && overlays.otsImagePath && (
                     <div className="absolute right-3 bottom-12 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center p-0 overflow-hidden bg-transparent">
-                      {overlays.otsImagePath ? (
-                        <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
-                      ) : (
-                        <div className="w-full h-full bg-[#B3B3B3]/40 rounded border border-white/20 flex items-center justify-center text-[7px] font-bold text-slate-800 uppercase">OTS</div>
-                      )}
+                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                     </div>
                   )}
 
@@ -318,7 +335,6 @@ function App() {
                           <span>{overlays.ticker1Title}:</span>
                           <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
                         </div>
-                        {overlays.showTime && <span className="shrink-0">{currentTimeStr || 'Time'}</span>}
                       </div>
                     )}
                     {overlays.ticker2Active && (
@@ -327,28 +343,47 @@ function App() {
                           <span>{overlays.ticker2Title}:</span>
                           <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                         </div>
-                        {overlays.showDate && <span className="shrink-0">{currentDateStr || 'Date'}</span>}
                       </div>
                     )}
+                  </div>
+
+                  {/* Floating Time and Date display box (Independent of tickers) */}
+                  <div className="absolute right-3.5 top-10 flex flex-col gap-1 text-[8px] font-bold font-mono text-slate-800 bg-slate-950/10 px-2 py-1 rounded select-none text-right">
+                    {overlays.showTime && <div>{currentTimeStr || 'Time'}</div>}
+                    {overlays.showDate && <div>{currentDateStr || 'Date'}</div>}
                   </div>
                 </div>
 
                 {/* External Live Stream button row */}
-                <div className="mt-4 flex gap-2">
-                  <button className="flex-1 py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                    External Live Stream
-                  </button>
-                  <button className="px-3 rounded-lg bg-[#DCDCDC] hover:bg-[#D0D0D0] text-[#333333] border border-[#C5C5C5] flex items-center justify-center transition-all shadow-sm">
-                    <ArrowUp className="w-4 h-4 stroke-[3]" />
+                <div className="mt-4 flex flex-col gap-2 bg-[#ECECEC] rounded-xl p-3 border border-white/40">
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Paste RTMP / HLS Stream URL (.m3u8)" 
+                      value={externalUrl} 
+                      onChange={(e) => setExternalUrl(e.target.value)}
+                      className="flex-1 bg-white border border-[#CCCCCC] rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none"
+                    />
+                    <button 
+                      onClick={handleAddExternalLink}
+                      className="px-4 py-1.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-xs tracking-wide transition-all shadow-sm"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                  <button className="w-full py-2 rounded-lg bg-[#DCDCDC] hover:bg-[#D0D0D0] text-[#333333] border border-[#C5C5C5] flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm">
+                    <ArrowUp className="w-3.5 h-3.5 stroke-[3]" />
+                    Push External Stream Live
                   </button>
                 </div>
               </div>
 
               {/* Insert Now Component */}
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 flex flex-col items-center justify-center text-center gap-4 py-8 sm:aspect-[4/3] cursor-pointer hover:bg-slate-50/50 transition-all">
+              <label className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/60 flex flex-col items-center justify-center text-center gap-4 py-8 sm:aspect-[4/3] cursor-pointer hover:bg-slate-50/50 transition-all">
                 <Upload className="w-10 h-10 sm:w-12 sm:h-12 text-[#333333] stroke-[1.5]" />
                 <span className="text-base sm:text-lg font-bold text-[#333333]">Insert Now</span>
-              </div>
+                <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
+              </label>
 
             </div>
 
@@ -521,6 +556,12 @@ function App() {
                       </div>
                     </div>
                   ))}
+
+                  {playlist.length === 0 && (
+                    <div className="text-center py-8 text-xs text-slate-500 font-bold">
+                      Playlist is empty. Add videos or live stream URLs.
+                    </div>
+                  )}
                 </div>
 
                 {/* Add Video button mockup */}
@@ -569,7 +610,6 @@ function App() {
                         <span>{overlays.ticker1Title}:</span>
                         <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker1Text}</marquee>
                       </div>
-                      {overlays.showTime && <span className="text-emerald-400 font-bold shrink-0">{currentTimeStr}</span>}
                     </div>
                   )}
                   {overlays.ticker2Active && (
@@ -578,9 +618,14 @@ function App() {
                         <span>{overlays.ticker2Title}:</span>
                         <marquee className="font-normal flex-1" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                       </div>
-                      {overlays.showDate && <span className="text-emerald-400 font-bold shrink-0">{currentDateStr}</span>}
                     </div>
                   )}
+                </div>
+
+                {/* Floating Time and Date display box (Independent of tickers) */}
+                <div className="absolute right-4 top-14 sm:right-6 sm:top-16 flex flex-col gap-1 text-[10px] sm:text-xs font-bold font-mono text-white bg-slate-950/80 px-3 py-1.5 rounded-md shadow-md select-none text-right">
+                  {overlays.showTime && <div>{currentTimeStr}</div>}
+                  {overlays.showDate && <div>{currentDateStr}</div>}
                 </div>
 
               </div>
