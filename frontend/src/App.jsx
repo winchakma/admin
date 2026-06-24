@@ -431,7 +431,9 @@ function App() {
                       <span className="text-xs font-bold text-[#333333]">Date</span>
                       <button 
                         onClick={() => updateOverlayField({ showDate: !overlays.showDate })}
-                        className={`w-8 h-4 rounded-full p-0.5 transition-all ${overlays.showDate ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                        className={`w-8 h-4 rounded-full p-0.5 transition-all ${overlays.showDate ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                      >
+                        <div className={`w-3 h-3 bg-white rounded-full transition-all ${overlays.showDate ? 'translate-x-4' : 'translate-x-0'}`}></div>
                       </button>
                     </div>
                   </div>
