@@ -6,6 +6,8 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
 const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const { startScheduler } = require('./scheduler');
 
 const app = express();
@@ -34,6 +36,8 @@ connectDB();
 
 // API Routes
 app.use('/api', apiRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Socket.io connection logic
 io.on('connection', (socket) => {

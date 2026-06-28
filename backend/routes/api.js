@@ -5,9 +5,10 @@ const path = require('path');
 const fs = require('fs');
 const { exec } = require('child_process');
 const Playlist = require('../models/Playlist');
-const Overlay = require('../models/Overlay');
 const AdItem = require('../models/AdItem');
 const AdState = require('../models/AdState');
+const Channel = require('../models/Channel');
+const { protect } = require('../middleware/auth');
 
 
 // Configure Multer for file uploads
@@ -41,10 +42,117 @@ const getVideoDuration = (filePath) => {
   });
 };
 
+/* --- Channel Routes (Live TV) --- */
+
+// Get all channels (PUBLIC ROUTE - used by Viewer Page)
+router.get('/channels', async (req, res) => {
+  try {
+    const channels = await Channel.find().sort('orderIndex');
+    res.json(channels);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a new channel
+router.post('/channels', protect, upload.single('logo'), async (req, res) => {
+  try {
+    const { name, streamUrl, category } = req.body;
+    if (!name || !streamUrl) {
+      return res.status(400).json({ error: 'Name and streamUrl are required' });
+    }
+
+    let logoPath = '';
+    if (req.file) {
+      logoPath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    }
+
+    const lastItem = await Channel.findOne().sort('-orderIndex');
+    const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
+
+    const newChannel = new Channel({
+      name,
+      streamUrl,
+      logoPath,
+      category: category || 'Live TV',
+      orderIndex
+    });
+
+    await newChannel.save();
+    
+    // Notify clients (if you want the viewer to auto-update)
+    const updatedChannels = await Channel.find().sort('orderIndex');
+    if (req.app.get('io')) {
+      req.app.get('io').emit('channels_updated', updatedChannels);
+    }
+
+    res.status(201).json(newChannel);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reorder channels
+router.put('/channels/reorder', protect, async (req, res) => {
+  try {
+    const { ids } = req.body; // Array of item IDs in the new order
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({ error: 'ids must be an array' });
+    }
+
+    const bulkOps = ids.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id },
+        update: { $set: { orderIndex: index } }
+      }
+    }));
+
+    await Channel.bulkWrite(bulkOps);
+    const updatedChannels = await Channel.find().sort('orderIndex');
+    
+    if (req.app.get('io')) {
+      req.app.get('io').emit('channels_updated', updatedChannels);
+    }
+
+    res.json(updatedChannels);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a channel
+router.delete('/channels/:id', protect, async (req, res) => {
+  try {
+    const channel = await Channel.findById(req.params.id);
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+
+    if (channel.logoPath) {
+      const fullPath = path.join(__dirname, '..', channel.logoPath);
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+
+    await Channel.findByIdAndDelete(req.params.id);
+    
+    const updatedChannels = await Channel.find().sort('orderIndex');
+    if (req.app.get('io')) {
+      req.app.get('io').emit('channels_updated', updatedChannels);
+    }
+
+    res.json({ message: 'Channel deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 /* --- Playlist Routes --- */
 
 // Get all playlist items sorted by orderIndex
-router.get('/playlist', async (req, res) => {
+router.get('/playlist', protect, async (req, res) => {
   try {
     const playlist = await Playlist.find().sort('orderIndex');
     res.json(playlist);
@@ -54,7 +162,7 @@ router.get('/playlist', async (req, res) => {
 });
 
 // Add external stream URL to playlist
-router.post('/playlist', async (req, res) => {
+router.post('/playlist', protect, async (req, res) => {
   try {
     const { title, videoUrl, duration } = req.body;
     if (!videoUrl) {
@@ -88,7 +196,7 @@ router.post('/playlist', async (req, res) => {
 });
 
 // Upload and add video to playlist
-router.post('/playlist/upload', upload.single('video'), async (req, res) => {
+router.post('/playlist/upload', protect, upload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No video file uploaded' });
@@ -118,7 +226,7 @@ router.post('/playlist/upload', upload.single('video'), async (req, res) => {
 });
 
 // Reorder playlist items
-router.put('/playlist/reorder', async (req, res) => {
+router.put('/playlist/reorder', protect, async (req, res) => {
   try {
     const { ids } = req.body; // Array of item IDs in the new order
     if (!Array.isArray(ids)) {
@@ -147,7 +255,7 @@ router.put('/playlist/reorder', async (req, res) => {
 });
 
 // Delete playlist item
-router.delete('/playlist/:id', async (req, res) => {
+router.delete('/playlist/:id', protect, async (req, res) => {
   try {
     const item = await Playlist.findById(req.params.id);
     if (!item) {
@@ -177,7 +285,7 @@ router.delete('/playlist/:id', async (req, res) => {
 /* --- Overlay Routes --- */
 
 // Get current overlay configurations
-router.get('/overlays', async (req, res) => {
+router.get('/overlays', protect, async (req, res) => {
   try {
     let config = await Overlay.findOne();
     if (!config) {
@@ -191,7 +299,7 @@ router.get('/overlays', async (req, res) => {
 });
 
 // Update overlay configuration
-router.post('/overlays', async (req, res) => {
+router.post('/overlays', protect, async (req, res) => {
   try {
     let config = await Overlay.findOne();
     if (!config) {
@@ -213,7 +321,7 @@ router.post('/overlays', async (req, res) => {
 });
 
 // Upload OTS Graphic Image
-router.post('/overlays/upload-ots', upload.single('image'), async (req, res) => {
+router.post('/overlays/upload-ots', protect, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file uploaded' });
@@ -242,7 +350,7 @@ router.post('/overlays/upload-ots', upload.single('image'), async (req, res) => 
 /* --- Ad Playlist & Playout Routes --- */
 
 // Get all ad items
-router.get('/ads', async (req, res) => {
+router.get('/ads', protect, async (req, res) => {
   try {
     const ads = await AdItem.find().sort({ createdAt: -1 });
     res.json(ads);
@@ -252,7 +360,7 @@ router.get('/ads', async (req, res) => {
 });
 
 // Upload and auto-play ad
-router.post('/ads/upload', upload.single('video'), async (req, res) => {
+router.post('/ads/upload', protect, upload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No ad video file uploaded' });
@@ -298,7 +406,7 @@ router.post('/ads/upload', upload.single('video'), async (req, res) => {
 });
 
 // Play an existing ad immediately
-router.post('/ads/:id/play', async (req, res) => {
+router.post('/ads/:id/play', protect, async (req, res) => {
   try {
     const ad = await AdItem.findById(req.params.id);
     if (!ad) {
@@ -338,7 +446,7 @@ router.post('/ads/:id/play', async (req, res) => {
 });
 
 // Stop current ad
-router.post('/ads/stop', async (req, res) => {
+router.post('/ads/stop', protect, async (req, res) => {
   try {
     let adState = await AdState.findOne();
     if (adState && adState.activeAd && adState.activeAd.startedAt) {
@@ -361,7 +469,7 @@ router.post('/ads/stop', async (req, res) => {
 });
 
 // Delete an ad item
-router.delete('/ads/:id', async (req, res) => {
+router.delete('/ads/:id', protect, async (req, res) => {
   try {
     const ad = await AdItem.findById(req.params.id);
     if (!ad) {
