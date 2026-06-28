@@ -390,23 +390,23 @@ function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col sm:flex-row bg-[#E3E3E3] text-[#333333] font-sans antialiased overflow-x-hidden select-none pb-20 sm:pb-0">
+    <div className="min-h-screen flex flex-col sm:flex-row bg-[#E3E3E3] text-gray-300 font-sans antialiased overflow-x-hidden select-none pb-20 sm:pb-0">
       
       {/* DESKTOP SIDEBAR NAVIGATION */}
-      <div className="hidden sm:flex w-16 bg-[#AFAFAF] border-r border-[#969696] flex-col items-center py-6 justify-between shrink-0">
+      <div className="hidden sm:flex w-16 bg-[#111111] border-r border-gray-800 flex-col items-center py-6 justify-between shrink-0">
         <div className="flex flex-col gap-6 items-center w-full">
-          <div className="text-[10px] font-black text-slate-800 tracking-wider mb-2 text-center uppercase">Site<br/>Logo</div>
+          <div className="text-[10px] font-black text-white tracking-wider mb-2 text-center uppercase">Site<br/>Logo</div>
           
           <button 
             onClick={() => setActiveTab('admin')} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-[#ECECEC] text-[#4A4A4A] shadow-inner border border-slate-300' : 'text-[#ECECEC] hover:bg-[#BDBDBD]'}`}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-[#ECECEC] hover:bg-[#BDBDBD]'}`}
           >
             <Home className="w-6 h-6" />
           </button>
           
           <button 
             onClick={() => setActiveTab('public')} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'public' ? 'bg-[#ECECEC] text-[#4A4A4A] shadow-inner border border-slate-300' : 'text-[#ECECEC] hover:bg-[#BDBDBD]'}`}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-[#ECECEC] hover:bg-[#BDBDBD]'}`}
           >
             <Folder className="w-6 h-6" />
           </button>
@@ -418,17 +418,17 @@ function AdminPanel() {
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION BAR */}
-      <div className="flex sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#AFAFAF] border-t border-[#969696] z-50 items-center justify-around px-4 shadow-lg">
+      <div className="flex sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111111] border-t border-gray-800 z-50 items-center justify-around px-4 shadow-lg">
         <button 
           onClick={() => setActiveTab('admin')} 
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'admin' ? 'bg-[#ECECEC] text-[#4A4A4A] border border-slate-300' : 'text-[#ECECEC]'}`}
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'admin' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-[#ECECEC]'}`}
         >
           <Home className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Admin</span>
         </button>
         <button 
           onClick={() => setActiveTab('public')} 
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'public' ? 'bg-[#ECECEC] text-[#4A4A4A] border border-slate-300' : 'text-[#ECECEC]'}`}
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-[#ECECEC]'}`}
         >
           <Folder className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Viewer</span>
@@ -445,11 +445,11 @@ function AdminPanel() {
         {/* Top Bar for View Toggle */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-7xl w-full mx-auto">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-800 tracking-wider">IPTV STREAM CONTROL CENTER</h2>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider">IPTV STREAM CONTROL CENTER</h2>
           </div>
           <button 
             onClick={() => setActiveTab(activeTab === 'admin' ? 'public' : 'admin')} 
-            className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-sm tracking-wide shadow-md transition-all text-center"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all text-center"
           >
             {activeTab === 'admin' ? 'Go to Public Viewer Page' : 'Return to Admin Panel'}
           </button>
@@ -463,9 +463,9 @@ function AdminPanel() {
             <div className="md:col-span-6 lg:col-span-4 flex flex-col gap-6">
               
               {/* Live Preview Screen */}
-              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60">
+              <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">Live Preview</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Live Preview</span>
                   <button className="px-2.5 py-1 rounded bg-[#C92C2C] text-white font-bold text-[9px] sm:text-[10px] tracking-widest flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5 fill-white text-[#C92C2C]" />
                     BROADCAST HALT
@@ -491,40 +491,40 @@ function AdminPanel() {
                       onClick={handlePlayUnmute}
                       className="absolute inset-0 w-full h-full bg-black/40 flex flex-col items-center justify-center gap-2 text-white font-bold text-xs transition-all hover:bg-black/50 z-10 cursor-pointer"
                     >
-                      <div className="w-12 h-12 rounded-full bg-[#5367B5] flex items-center justify-center shadow-lg">
+                      <div className="w-12 h-12 rounded-full bg-pink-600 flex items-center justify-center shadow-lg">
                         <Play className="w-6 h-6 fill-white text-white ml-1" />
                       </div>
                       <span>Click to Play / Unmute Preview</span>
                     </button>
                   )}
 
-                  <div className="absolute top-2.5 left-2.5 bg-[#AFAFAF] border border-[#969696] text-black font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20">
+                  <div className="absolute top-2.5 left-2.5 bg-[#111111] border border-gray-800 text-white font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20">
                     Logo
                   </div>
 
                   {/* OTS Overlay */}
                   {overlays.otsActive && overlays.otsImagePath && (
-                    <div className="absolute right-2.5 bottom-[42px] w-9 h-9 sm:w-11 sm:h-11 bg-[#AFAFAF] border border-[#969696] flex items-center justify-center p-1 rounded z-20 shadow-md">
+                    <div className="absolute right-2.5 bottom-[42px] w-9 h-9 sm:w-11 sm:h-11 bg-[#111111] border border-gray-800 flex items-center justify-center p-1 rounded z-20 shadow-md">
                       <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                     </div>
                   )}
 
                   {/* Tickers & Time/Date Aligned Bottom Rows */}
-                  <div className="absolute bottom-1 left-1 right-1 flex flex-col gap-0.5 z-20 text-[6px] sm:text-[8px] font-bold text-black select-none">
+                  <div className="absolute bottom-1 left-1 right-1 flex flex-col gap-0.5 z-20 text-[6px] sm:text-[8px] font-bold text-white select-none">
                     {/* Row 1 (Ticker 1 & Time) */}
                     {overlays.ticker1Active && (
                       <div className="flex gap-0.5 w-full">
                         {/* Ticker 1 Title */}
-                        <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
+                        <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
                           {overlays.ticker1Title}
                         </div>
                         {/* Ticker 1 Text */}
-                        <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-1.5 py-0.5 flex items-center overflow-hidden">
+                        <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
                           <marquee className="font-normal flex-1" scrollamount="1.5">{overlays.ticker1Text}</marquee>
                         </div>
                         {/* Time */}
                         {overlays.showTime && (
-                          <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
+                          <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
                             {currentTimeStr || 'Time'}
                           </div>
                         )}
@@ -535,16 +535,16 @@ function AdminPanel() {
                     {overlays.ticker2Active && (
                       <div className="flex gap-0.5 w-full">
                         {/* Ticker 2 Title */}
-                        <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
+                        <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
                           {overlays.ticker2Title}
                         </div>
                         {/* Ticker 2 Text */}
-                        <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-1.5 py-0.5 flex items-center overflow-hidden">
+                        <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
                           <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker2Text}</marquee>
                         </div>
                         {/* Date */}
                         {overlays.showDate && (
-                          <div className="bg-[#AFAFAF] border border-[#969696] px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
+                          <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
                             {currentDateStr || 'Date'}
                           </div>
                         )}
@@ -554,23 +554,23 @@ function AdminPanel() {
                 </div>
 
                 {/* External Live Stream button row */}
-                <div className="mt-4 flex flex-col gap-2 bg-[#ECECEC] rounded-xl p-3 border border-white/40">
+                <div className="mt-4 flex flex-col gap-2 bg-[#1a1a1a] rounded-xl p-3 border border-white/40">
                   <div className="flex gap-2">
                     <input 
                       type="text" 
                       placeholder="Paste RTMP / HLS Stream URL (.m3u8)" 
                       value={externalUrl} 
                       onChange={(e) => setExternalUrl(e.target.value)}
-                      className="flex-1 bg-white border border-[#CCCCCC] rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none"
+                      className="flex-1 bg-[#2a2a2a] border border-[#CCCCCC] rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none"
                     />
                     <button 
                       onClick={handleAddExternalLink}
-                      className="px-4 py-1.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-xs tracking-wide transition-all shadow-sm"
+                      className="px-4 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs tracking-wide transition-all shadow-sm"
                     >
                       Connect
                     </button>
                   </div>
-                  <button className="w-full py-2 rounded-lg bg-[#DCDCDC] hover:bg-[#D0D0D0] text-[#333333] border border-[#C5C5C5] flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm">
+                  <button className="w-full py-2 rounded-lg bg-[#DCDCDC] hover:bg-[#D0D0D0] text-gray-300 border border-[#C5C5C5] flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm">
                     <ArrowUp className="w-3.5 h-3.5 stroke-[3]" />
                     Push External Stream Live
                   </button>
@@ -578,9 +578,9 @@ function AdminPanel() {
               </div>
 
               {/* Ad Playout Component */}
-              <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-slate-200/60 flex flex-col gap-4">
+              <div className="bg-[#2a2a2a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-700/60 flex flex-col gap-4">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                  <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">Ad Playout</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Ad Playout</span>
                   {status.activeVideo?.isAd && (
                     <button 
                       onClick={handleStopAd}
@@ -598,9 +598,9 @@ function AdminPanel() {
                     placeholder="Enter ad title (optional)" 
                     value={adTitle} 
                     onChange={(e) => setAdTitle(e.target.value)}
-                    className="bg-[#F0F0F0] border-none rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none w-full"
+                    className="bg-[#F0F0F0] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
                   />
-                  <label className="py-2.5 rounded-lg bg-[#5367B5] hover:bg-[#46579E] text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full">
+                  <label className="py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     {isAdUploading ? 'Uploading Ad...' : 'Upload & Play Ad Now'}
                     <input type="file" accept="video/*" onChange={handleAdUpload} className="hidden" disabled={isAdUploading} />
@@ -609,12 +609,12 @@ function AdminPanel() {
 
                 {/* Ad Playlist (history of uploaded ads) */}
                 <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto mt-2 pr-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ad Playlist</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ad Playlist</span>
                   {ads.map((ad) => (
-                    <div key={ad._id} className="flex items-center justify-between bg-slate-50 rounded-lg p-2 border border-slate-200/40 text-xs">
+                    <div key={ad._id} className="flex items-center justify-between bg-[#1a1a1a] rounded-lg p-2 border border-gray-700/40 text-xs">
                       <div className="flex flex-col min-w-0 pr-2">
-                        <span className="font-bold text-slate-700 truncate">{ad.title}</span>
-                        <span className="text-[9px] text-slate-400 font-mono">{formatTime(ad.duration)}</span>
+                        <span className="font-bold text-gray-200 truncate">{ad.title}</span>
+                        <span className="text-[9px] text-gray-500 font-mono">{formatTime(ad.duration)}</span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <button 
@@ -625,7 +625,7 @@ function AdminPanel() {
                         </button>
                         <button 
                           onClick={() => handleRemoveAd(ad._id)}
-                          className="text-slate-400 hover:text-[#C92C2C] transition-all"
+                          className="text-gray-500 hover:text-[#C92C2C] transition-all"
                         >
                           <XCircle className="w-4.5 h-4.5" />
                         </button>
@@ -633,7 +633,7 @@ function AdminPanel() {
                     </div>
                   ))}
                   {ads.length === 0 && (
-                    <div className="text-center py-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    <div className="text-center py-4 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
                       No Ads Uploaded Yet
                     </div>
                   )}
@@ -646,9 +646,9 @@ function AdminPanel() {
             <div className="md:col-span-6 lg:col-span-4 flex flex-col gap-6">
               
               {/* News Tickers config */}
-              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60 flex flex-col gap-5">
+              <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-5">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">News Ticker</span>
+                  <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">News Ticker</span>
                   <button className="w-6 h-6 rounded-full bg-[#E95C5C]/20 hover:bg-[#E95C5C]/35 text-[#C92C2C] flex items-center justify-center transition-all">
                     <Play className="w-3.5 h-3.5 fill-[#C92C2C] stroke-none" />
                   </button>
@@ -662,20 +662,20 @@ function AdminPanel() {
                     placeholder="Title Card" 
                     value={overlays.ticker1Title || ''} 
                     onChange={(e) => updateOverlayField({ ticker1Title: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
                     value={overlays.ticker1Text || ''} 
                     onChange={(e) => updateOverlayField({ ticker1Text: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <button 
                     onClick={() => updateOverlayField({ ticker1Active: !overlays.ticker1Active })}
                     className={`w-12 h-6 rounded-full p-1 transition-all ${overlays.ticker1Active ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
                   >
-                    <div className={`w-4 h-4 bg-white rounded-full transition-all ${overlays.ticker1Active ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    <div className={`w-4 h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.ticker1Active ? 'translate-x-6' : 'translate-x-0'}`}></div>
                   </button>
                 </div>
 
@@ -687,20 +687,20 @@ function AdminPanel() {
                     placeholder="Title Card" 
                     value={overlays.ticker2Title || ''} 
                     onChange={(e) => updateOverlayField({ ticker2Title: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
                     value={overlays.ticker2Text || ''} 
                     onChange={(e) => updateOverlayField({ ticker2Text: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-[#333333] outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
                   />
                   <button 
                     onClick={() => updateOverlayField({ ticker2Active: !overlays.ticker2Active })}
                     className={`w-12 h-6 rounded-full p-1 transition-all ${overlays.ticker2Active ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
                   >
-                    <div className={`w-4 h-4 bg-white rounded-full transition-all ${overlays.ticker2Active ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    <div className={`w-4 h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.ticker2Active ? 'translate-x-6' : 'translate-x-0'}`}></div>
                   </button>
                 </div>
 
@@ -709,21 +709,21 @@ function AdminPanel() {
                   <span className="text-[11px] font-bold text-[#666666] tracking-wide text-center">Time and Date</span>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="flex-1 bg-[#D9D9D9] rounded-xl px-4 py-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#333333]">Time</span>
+                      <span className="text-xs font-bold text-gray-300">Time</span>
                       <button 
                         onClick={() => updateOverlayField({ showTime: !overlays.showTime })}
                         className={`w-8 h-4 rounded-full p-0.5 transition-all ${overlays.showTime ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
                       >
-                        <div className={`w-3 h-3 bg-white rounded-full transition-all ${overlays.showTime ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                        <div className={`w-3 h-3 bg-[#2a2a2a] rounded-full transition-all ${overlays.showTime ? 'translate-x-4' : 'translate-x-0'}`}></div>
                       </button>
                     </div>
                     <div className="flex-1 bg-[#D9D9D9] rounded-xl px-4 py-2 flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#333333]">Date</span>
+                      <span className="text-xs font-bold text-gray-300">Date</span>
                       <button 
                         onClick={() => updateOverlayField({ showDate: !overlays.showDate })}
                         className={`w-8 h-4 rounded-full p-0.5 transition-all ${overlays.showDate ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
                       >
-                        <div className={`w-3 h-3 bg-white rounded-full transition-all ${overlays.showDate ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                        <div className={`w-3 h-3 bg-[#2a2a2a] rounded-full transition-all ${overlays.showDate ? 'translate-x-4' : 'translate-x-0'}`}></div>
                       </button>
                     </div>
                   </div>
@@ -732,16 +732,16 @@ function AdminPanel() {
               </div>
 
               {/* OTS Graphic config */}
-              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60 flex flex-col gap-4">
-                <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">OTS Graphic</span>
+              <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-4">
+                <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">OTS Graphic</span>
                 <div className="bg-[#969696] rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
-                    <label className="py-2.5 rounded-lg bg-[#ECECEC] hover:bg-[#DFDFDF] text-[#333333] font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
+                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-[#DFDFDF] text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
                       Upload
                       <input type="file" accept="image/*" onChange={handleOtsUpload} className="hidden" />
                     </label>
-                    <button className="py-2.5 rounded-lg bg-[#ECECEC] hover:bg-[#DFDFDF] text-[#333333] font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
+                    <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-[#DFDFDF] text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
                       <ArrowUp className="w-3.5 h-3.5 rotate-135 stroke-[3]" />
                       Bottom Right
                     </button>
@@ -750,7 +750,7 @@ function AdminPanel() {
                     {overlays.otsImagePath ? (
                       <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain rounded" />
                     ) : (
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Preview</span>
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Preview</span>
                     )}
                   </div>
                 </div>
@@ -760,7 +760,7 @@ function AdminPanel() {
                   onClick={() => updateOverlayField({ otsActive: !overlays.otsActive })}
                   className={`w-12 h-6 rounded-full p-1 self-end transition-all ${overlays.otsActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full transition-all ${overlays.otsActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                  <div className={`w-4 h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.otsActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
                 </button>
               </div>
 
@@ -770,8 +770,8 @@ function AdminPanel() {
             <div className="md:col-span-12 lg:col-span-4 flex flex-col gap-6">
               
               {/* Video Playlist Serial container */}
-              <div className="bg-[#ECECEC] rounded-xl p-4 sm:p-5 shadow-sm border border-white/60 flex flex-col gap-4 flex-1">
-                <span className="text-xs sm:text-sm font-extrabold text-[#333333] uppercase tracking-wide">Video Playlist Serial</span>
+              <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-4 flex-1">
+                <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Video Playlist Serial</span>
                 
                 {/* Table headers */}
                 <div className="grid grid-cols-12 text-center text-[9px] sm:text-[10px] font-bold text-[#666666] tracking-widest pb-1 border-b border-[#CCCCCC] select-none">
@@ -784,13 +784,13 @@ function AdminPanel() {
                 {/* List rows */}
                 <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[300px] sm:max-h-[350px] pr-1">
                   {playlist.map((video, idx) => (
-                    <div key={video._id} className="grid grid-cols-12 items-center bg-white rounded-lg p-2 sm:p-2.5 border border-slate-200/50 shadow-sm text-center">
+                    <div key={video._id} className="grid grid-cols-12 items-center bg-[#2a2a2a] rounded-lg p-2 sm:p-2.5 border border-gray-700/50 shadow-sm text-center">
                       <div className="col-span-6 flex items-center gap-1.5 sm:gap-2 text-left min-w-0">
-                        <button className="text-slate-400 hover:text-slate-600">
+                        <button className="text-gray-500 hover:text-gray-300">
                           <MoreVertical className="w-3.5 h-3.5" />
                         </button>
                         <div className="w-6 h-6 sm:w-8 sm:h-8 rounded bg-[#B3B3B3] shrink-0"></div>
-                        <span className="text-xs font-bold text-[#333333] truncate pr-1">{video.title}</span>
+                        <span className="text-xs font-bold text-gray-300 truncate pr-1">{video.title}</span>
                       </div>
                       
                       {/* Left timer columns */}
@@ -813,7 +813,7 @@ function AdminPanel() {
                   ))}
 
                   {playlist.length === 0 && (
-                    <div className="text-center py-8 text-xs text-slate-500 font-bold">
+                    <div className="text-center py-8 text-xs text-gray-400 font-bold">
                       Playlist is empty. Add videos or live stream URLs.
                     </div>
                   )}
@@ -826,9 +826,9 @@ function AdminPanel() {
                     placeholder="Enter video title (optional)" 
                     value={uploadTitle} 
                     onChange={(e) => setUploadTitle(e.target.value)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3 py-1.5 text-xs text-[#333333] outline-none w-full"
+                    className="bg-[#D9D9D9] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
                   />
-                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-[#333333] font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-[#C5C5C5] transition-all shadow-sm cursor-pointer w-full">
+                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-gray-300 font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-[#C5C5C5] transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     Add Video
                     <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
@@ -861,7 +861,7 @@ function AdminPanel() {
                     onClick={handlePlayUnmute}
                     className="absolute inset-0 w-full h-full bg-black/60 flex flex-col items-center justify-center gap-3 text-white font-bold text-sm transition-all hover:bg-black/75 z-10 cursor-pointer"
                   >
-                    <div className="w-16 h-16 rounded-full bg-[#5367B5] flex items-center justify-center shadow-2xl">
+                    <div className="w-16 h-16 rounded-full bg-pink-600 flex items-center justify-center shadow-2xl">
                       <Play className="w-8 h-8 fill-white text-white ml-1.5" />
                     </div>
                     <span>Click to Unmute / Play Linear Stream</span>
@@ -869,33 +869,33 @@ function AdminPanel() {
                 )}
 
                 {/* Site Logo */}
-                <div className="absolute top-4 left-4 bg-[#AFAFAF] border border-[#969696] text-black font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20">
+                <div className="absolute top-4 left-4 bg-[#111111] border border-gray-800 text-white font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20">
                   Logo
                 </div>
 
                 {/* OTS graphic overlay in public player */}
                 {overlays.otsActive && overlays.otsImagePath && (
-                  <div className="absolute right-4 bottom-24 w-16 h-16 sm:w-24 sm:h-24 bg-[#AFAFAF] border border-[#969696] flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
+                  <div className="absolute right-4 bottom-24 w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
                     <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
 
                 {/* Tickers & Time/Date Aligned Bottom Rows */}
-                <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 z-20 text-[9px] sm:text-xs font-bold text-black select-none">
+                <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 z-20 text-[9px] sm:text-xs font-bold text-white select-none">
                   {/* Row 1 (Ticker 1 & Time) */}
                   {overlays.ticker1Active && (
                     <div className="flex gap-1 w-full shadow-md">
                       {/* Ticker 1 Title */}
-                      <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-l min-w-[80px] sm:min-w-[110px] text-center flex items-center justify-center uppercase tracking-wide">
+                      <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-l min-w-[80px] sm:min-w-[110px] text-center flex items-center justify-center uppercase tracking-wide">
                         {overlays.ticker1Title}
                       </div>
                       {/* Ticker 1 Text */}
-                      <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-3 py-1.5 flex items-center overflow-hidden">
-                        <marquee className="font-normal flex-1 text-slate-800" scrollamount="2">{overlays.ticker1Text}</marquee>
+                      <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
+                        <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
                       </div>
                       {/* Time */}
                       {overlays.showTime && (
-                        <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
+                        <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
                           {currentTimeStr}
                         </div>
                       )}
@@ -906,16 +906,16 @@ function AdminPanel() {
                   {overlays.ticker2Active && (
                     <div className="flex gap-1 w-full shadow-md">
                       {/* Ticker 2 Title */}
-                      <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-l min-w-[80px] sm:min-w-[110px] text-center flex items-center justify-center uppercase tracking-wide">
+                      <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-l min-w-[80px] sm:min-w-[110px] text-center flex items-center justify-center uppercase tracking-wide">
                         {overlays.ticker2Title}
                       </div>
                       {/* Ticker 2 Text */}
-                      <div className="flex-1 bg-[#D9D9D9] border-y border-[#969696] px-3 py-1.5 flex items-center overflow-hidden">
-                        <marquee className="font-normal flex-1 text-slate-800" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                      <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
+                        <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                       </div>
                       {/* Date */}
                       {overlays.showDate && (
-                        <div className="bg-[#AFAFAF] border border-[#969696] px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
+                        <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
                           {currentDateStr}
                         </div>
                       )}
@@ -929,7 +929,7 @@ function AdminPanel() {
                 <span className="text-xs sm:text-sm font-bold text-slate-300">Live Linear Broadcast (24/7 View Mode)</span>
                 <button 
                   onClick={() => setActiveTab('admin')} 
-                  className="px-3 py-1.5 bg-[#5367B5] hover:bg-[#46579E] rounded text-[10px] sm:text-xs font-bold text-white transition-all"
+                  className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 rounded text-[10px] sm:text-xs font-bold text-white transition-all"
                 >
                   Return to Dashboard
                 </button>
@@ -942,11 +942,11 @@ function AdminPanel() {
         {activeTab === 'admin' && (
           <div className="w-full max-w-7xl mx-auto mt-8">
             <div className="inline-flex">
-              <div className="px-6 py-2.5 rounded-t-xl bg-white border-t border-x border-slate-200/60 font-bold text-xs tracking-wider text-slate-800">
+              <div className="px-6 py-2.5 rounded-t-xl bg-[#2a2a2a] border-t border-x border-gray-700/60 font-bold text-xs tracking-wider text-white">
                 Video Gallery
               </div>
             </div>
-            <div className="bg-white rounded-b-xl rounded-tr-xl p-6 border border-slate-200/60 shadow-sm min-h-[120px] flex flex-col gap-4">
+            <div className="bg-[#2a2a2a] rounded-b-xl rounded-tr-xl p-6 border border-gray-700/60 shadow-sm min-h-[120px] flex flex-col gap-4">
               <span className="text-xs font-bold text-[#666666] tracking-wider border-b pb-1">News</span>
               <div className="flex gap-4">
                 {/* Gallery item mocks */}
