@@ -10,8 +10,8 @@ const seedSuperAdmin = async () => {
     await mongoose.connect(MONGO_URI);
     console.log('MongoDB connected for seeding...');
 
-    const superAdminEmail = 'admin@example.com'; // Change this to whatever the user wants
-    const superAdminPassword = 'password123'; // Change this to a secure password
+    const superAdminEmail = 'winchakma123@gmail.com'; // User's requested email
+    const superAdminPassword = 'password123'; // Temporary password
 
     const existingUser = await User.findOne({ email: superAdminEmail });
     if (existingUser) {

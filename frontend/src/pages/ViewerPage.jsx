@@ -62,7 +62,7 @@ const ViewerPage = () => {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 sticky top-0 bg-[#111111] z-50">
         <div className="flex items-center space-x-6">
-          <div className="text-2xl font-bold text-pink-500 mr-8">TOFFEE CLONE</div>
+          <div className="text-2xl font-bold text-pink-500 mr-8">MS BD SHOP ~ LTD</div>
           <nav className="hidden md:flex space-x-6 text-sm font-medium text-gray-300">
             <a href="#" className="hover:text-white pb-1 border-b-2 border-white">Live TV</a>
             <a href="#" className="hover:text-white">Sports</a>
