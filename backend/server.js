@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const seedSuperAdmin = require('./seed');
 const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
@@ -31,8 +32,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve local stream outputs
 app.use('/stream', express.static(path.join(__dirname, 'stream')));
 
-// Connect to MongoDB
-connectDB();
+// Connect Database and Seed
+connectDB().then(() => {
+  seedSuperAdmin();
+});
 
 // API Routes
 app.use('/api', apiRoutes);
