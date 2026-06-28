@@ -399,20 +399,20 @@ function AdminPanel() {
           
           <button 
             onClick={() => setActiveTab('admin')} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-[#ECECEC] hover:bg-[#BDBDBD]'}`}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'admin' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-white hover:bg-[#BDBDBD]'}`}
           >
             <Home className="w-6 h-6" />
           </button>
           
           <button 
             onClick={() => setActiveTab('public')} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-[#ECECEC] hover:bg-[#BDBDBD]'}`}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-white hover:bg-[#BDBDBD]'}`}
           >
             <Folder className="w-6 h-6" />
           </button>
         </div>
         
-        <button className="w-12 h-12 rounded-full flex items-center justify-center text-[#ECECEC] hover:bg-[#BDBDBD] transition-all">
+        <button className="w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-[#BDBDBD] transition-all">
           <Settings className="w-6 h-6" />
         </button>
       </div>
@@ -421,19 +421,19 @@ function AdminPanel() {
       <div className="flex sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111111] border-t border-gray-800 z-50 items-center justify-around px-4 shadow-lg">
         <button 
           onClick={() => setActiveTab('admin')} 
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'admin' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-[#ECECEC]'}`}
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'admin' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-white'}`}
         >
           <Home className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Admin</span>
         </button>
         <button 
           onClick={() => setActiveTab('public')} 
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-[#ECECEC]'}`}
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-white'}`}
         >
           <Folder className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Viewer</span>
         </button>
-        <button className="flex flex-col items-center justify-center w-12 h-12 text-[#ECECEC]">
+        <button className="flex flex-col items-center justify-center w-12 h-12 text-white">
           <Settings className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Config</span>
         </button>
@@ -519,7 +519,7 @@ function AdminPanel() {
                           {overlays.ticker1Title}
                         </div>
                         {/* Ticker 1 Text */}
-                        <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
+                        <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
                           <marquee className="font-normal flex-1" scrollamount="1.5">{overlays.ticker1Text}</marquee>
                         </div>
                         {/* Time */}
@@ -539,7 +539,7 @@ function AdminPanel() {
                           {overlays.ticker2Title}
                         </div>
                         {/* Ticker 2 Text */}
-                        <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
+                        <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
                           <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker2Text}</marquee>
                         </div>
                         {/* Date */}
@@ -561,7 +561,7 @@ function AdminPanel() {
                       placeholder="Paste RTMP / HLS Stream URL (.m3u8)" 
                       value={externalUrl} 
                       onChange={(e) => setExternalUrl(e.target.value)}
-                      className="flex-1 bg-[#2a2a2a] border border-[#CCCCCC] rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none"
+                      className="flex-1 bg-[#2a2a2a] border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none"
                     />
                     <button 
                       onClick={handleAddExternalLink}
@@ -570,7 +570,7 @@ function AdminPanel() {
                       Connect
                     </button>
                   </div>
-                  <button className="w-full py-2 rounded-lg bg-[#DCDCDC] hover:bg-[#D0D0D0] text-gray-300 border border-[#C5C5C5] flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm">
+                  <button className="w-full py-2 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] text-gray-300 border border-gray-700 flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm">
                     <ArrowUp className="w-3.5 h-3.5 stroke-[3]" />
                     Push External Stream Live
                   </button>
@@ -655,21 +655,21 @@ function AdminPanel() {
                 </div>
 
                 {/* News Ticker 1 */}
-                <div className="bg-[#969696] rounded-xl p-4 flex flex-col gap-3">
-                  <span className="text-xs font-bold text-[#ECECEC] tracking-wide text-center">News Ticker -1</span>
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
+                  <span className="text-xs font-bold text-white tracking-wide text-center">News Ticker -1</span>
                   <input 
                     type="text" 
                     placeholder="Title Card" 
                     value={overlays.ticker1Title || ''} 
                     onChange={(e) => updateOverlayField({ ticker1Title: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#2a2a2a] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-gray-500 w-full"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
                     value={overlays.ticker1Text || ''} 
                     onChange={(e) => updateOverlayField({ ticker1Text: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#2a2a2a] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-gray-500 w-full"
                   />
                   <button 
                     onClick={() => updateOverlayField({ ticker1Active: !overlays.ticker1Active })}
@@ -680,21 +680,21 @@ function AdminPanel() {
                 </div>
 
                 {/* News Ticker 2 */}
-                <div className="bg-[#969696] rounded-xl p-4 flex flex-col gap-3">
-                  <span className="text-xs font-bold text-[#ECECEC] tracking-wide text-center">News Ticker -2</span>
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
+                  <span className="text-xs font-bold text-white tracking-wide text-center">News Ticker -2</span>
                   <input 
                     type="text" 
                     placeholder="Title Card" 
                     value={overlays.ticker2Title || ''} 
                     onChange={(e) => updateOverlayField({ ticker2Title: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#2a2a2a] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-gray-500 w-full"
                   />
                   <input 
                     type="text" 
                     placeholder="Headline Text" 
                     value={overlays.ticker2Text || ''} 
                     onChange={(e) => updateOverlayField({ ticker2Text: e.target.value }, true)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-[#888888] w-full"
+                    className="bg-[#2a2a2a] border-none rounded-lg px-3.5 py-2 text-xs text-gray-300 outline-none font-semibold placeholder:text-gray-500 w-full"
                   />
                   <button 
                     onClick={() => updateOverlayField({ ticker2Active: !overlays.ticker2Active })}
@@ -708,7 +708,7 @@ function AdminPanel() {
                 <div className="flex flex-col gap-3">
                   <span className="text-[11px] font-bold text-[#666666] tracking-wide text-center">Time and Date</span>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="flex-1 bg-[#D9D9D9] rounded-xl px-4 py-2 flex items-center justify-between">
+                    <div className="flex-1 bg-[#2a2a2a] rounded-xl px-4 py-2 flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-300">Time</span>
                       <button 
                         onClick={() => updateOverlayField({ showTime: !overlays.showTime })}
@@ -717,7 +717,7 @@ function AdminPanel() {
                         <div className={`w-3 h-3 bg-[#2a2a2a] rounded-full transition-all ${overlays.showTime ? 'translate-x-4' : 'translate-x-0'}`}></div>
                       </button>
                     </div>
-                    <div className="flex-1 bg-[#D9D9D9] rounded-xl px-4 py-2 flex items-center justify-between">
+                    <div className="flex-1 bg-[#2a2a2a] rounded-xl px-4 py-2 flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-300">Date</span>
                       <button 
                         onClick={() => updateOverlayField({ showDate: !overlays.showDate })}
@@ -734,14 +734,14 @@ function AdminPanel() {
               {/* OTS Graphic config */}
               <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-4">
                 <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">OTS Graphic</span>
-                <div className="bg-[#969696] rounded-xl p-4 flex flex-col sm:flex-row gap-4">
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
-                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-[#DFDFDF] text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
+                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
                       Upload
                       <input type="file" accept="image/*" onChange={handleOtsUpload} className="hidden" />
                     </label>
-                    <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-[#DFDFDF] text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
+                    <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
                       <ArrowUp className="w-3.5 h-3.5 rotate-135 stroke-[3]" />
                       Bottom Right
                     </button>
@@ -774,7 +774,7 @@ function AdminPanel() {
                 <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Video Playlist Serial</span>
                 
                 {/* Table headers */}
-                <div className="grid grid-cols-12 text-center text-[9px] sm:text-[10px] font-bold text-[#666666] tracking-widest pb-1 border-b border-[#CCCCCC] select-none">
+                <div className="grid grid-cols-12 text-center text-[9px] sm:text-[10px] font-bold text-[#666666] tracking-widest pb-1 border-b border-gray-700 select-none">
                   <div className="col-span-6 text-left pl-7">TITLE</div>
                   <div className="col-span-2">LEFT</div>
                   <div className="col-span-2">LEFT</div>
@@ -826,9 +826,9 @@ function AdminPanel() {
                     placeholder="Enter video title (optional)" 
                     value={uploadTitle} 
                     onChange={(e) => setUploadTitle(e.target.value)}
-                    className="bg-[#D9D9D9] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
+                    className="bg-[#2a2a2a] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
                   />
-                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-gray-300 font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-[#C5C5C5] transition-all shadow-sm cursor-pointer w-full">
+                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-gray-300 font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-gray-700 transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     Add Video
                     <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
@@ -890,7 +890,7 @@ function AdminPanel() {
                         {overlays.ticker1Title}
                       </div>
                       {/* Ticker 1 Text */}
-                      <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
+                      <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
                         <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
                       </div>
                       {/* Time */}
@@ -910,7 +910,7 @@ function AdminPanel() {
                         {overlays.ticker2Title}
                       </div>
                       {/* Ticker 2 Text */}
-                      <div className="flex-1 bg-[#D9D9D9] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
+                      <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
                         <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                       </div>
                       {/* Date */}
