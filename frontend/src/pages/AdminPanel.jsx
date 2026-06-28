@@ -390,7 +390,7 @@ function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col sm:flex-row bg-[#E3E3E3] text-gray-300 font-sans antialiased overflow-x-hidden select-none pb-20 sm:pb-0">
+    <div className="min-h-screen flex flex-col sm:flex-row bg-[#111111] text-gray-300 font-sans antialiased overflow-x-hidden select-none pb-20 sm:pb-0">
       
       {/* DESKTOP SIDEBAR NAVIGATION */}
       <div className="hidden sm:flex w-16 bg-[#111111] border-r border-gray-800 flex-col items-center py-6 justify-between shrink-0">
