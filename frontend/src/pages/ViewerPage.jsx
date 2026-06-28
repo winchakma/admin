@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import Hls from 'hls.js';
 
 const ViewerPage = () => {
@@ -69,6 +70,9 @@ const ViewerPage = () => {
             <a href="#" className="hover:text-white">Drama</a>
             <a href="#" className="hover:text-white">Movies</a>
           </nav>
+        </div>
+        <div>
+          <Link to="/login" className="text-xs text-gray-500 hover:text-white transition-colors">Admin Login</Link>
         </div>
       </header>
 
