@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const OverlaySchema = new mongoose.Schema({
+  ticker1Title: {
+    type: String,
+    default: 'Title Card'
+  },
   ticker1Text: {
     type: String,
     default: 'Headline News 1'
@@ -8,6 +12,10 @@ const OverlaySchema = new mongoose.Schema({
   ticker1Active: {
     type: Boolean,
     default: false
+  },
+  ticker2Title: {
+    type: String,
+    default: 'Title Card'
   },
   ticker2Text: {
     type: String,
@@ -25,9 +33,17 @@ const OverlaySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  showTimeDate: {
+  showTime: {
     type: Boolean,
-    default: false
+    default: true
+  },
+  showDate: {
+    type: Boolean,
+    default: true
+  },
+  isBroadcastActive: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

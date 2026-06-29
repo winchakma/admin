@@ -378,21 +378,6 @@ router.post('/ads/upload', protect, upload.single('video'), async (req, res) => 
 
     await newAd.save();
 
-    // Automatically play this ad immediately
-    let adState = await AdState.findOne();
-    if (!adState) {
-      adState = new AdState({ totalAdTimeOffset: 0 });
-    }
-
-    adState.activeAd = {
-      title: newAd.title,
-      filePath: newAd.filePath,
-      duration: newAd.duration,
-      startedAt: new Date()
-    };
-
-    await adState.save();
-
     // Notify clients
     const updatedAds = await AdItem.find().sort({ createdAt: -1 });
     if (req.app.get('io')) {

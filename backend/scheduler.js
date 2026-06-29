@@ -34,6 +34,17 @@ const startScheduler = (io) => {
         await adState.save();
       }
 
+      const overlayConfig = await Overlay.findOne() || {};
+      
+      // Check if broadcast is halted
+      if (overlayConfig.isBroadcastActive === false) {
+        currentStatus.isPlaying = false;
+        currentStatus.activeVideo = null;
+        currentStatus.overlays = overlayConfig;
+        io.emit('stream_status', currentStatus);
+        return;
+      }
+
       // Check if an ad is currently playing
       if (adState.activeAd && adState.activeAd.startedAt) {
         let elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
@@ -53,8 +64,7 @@ const startScheduler = (io) => {
           currentStatus.elapsedTime = Math.floor(elapsed);
           currentStatus.remainingTime = Math.max(0, Math.floor(adState.activeAd.duration - elapsed));
 
-          const overlayConfig = await Overlay.findOne();
-          currentStatus.overlays = overlayConfig || {};
+          currentStatus.overlays = overlayConfig;
 
           io.emit('stream_status', currentStatus);
           return;
@@ -106,8 +116,7 @@ const startScheduler = (io) => {
       currentStatus.remainingTime = Math.max(0, Math.floor(selectedItem.duration - offset));
 
       // Fetch active overlays to broadcast
-      const overlayConfig = await Overlay.findOne();
-      currentStatus.overlays = overlayConfig || {};
+      currentStatus.overlays = overlayConfig;
 
       io.emit('stream_status', currentStatus);
 

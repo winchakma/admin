@@ -49,7 +49,8 @@ function AdminPanel() {
     otsImagePath: '',
     otsActive: false,
     showTime: true,
-    showDate: true
+    showDate: true,
+    isBroadcastActive: true
   });
 
   const [status, setStatus] = useState({
@@ -366,11 +367,8 @@ function AdminPanel() {
     const formData = new FormData();
     formData.append('image', file);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateOverlayField({ otsImagePath: reader.result, otsActive: true });
-    };
-    reader.readAsDataURL(file);
+    // Note: Do not update React state instantly with base64, as it breaks the background sync if the image is too large.
+    // Instead, rely purely on the socket event to pull down the final URL after upload.
 
     try {
       await apiFetch(`${SOCKET_URL}/api/overlays/upload-ots`, {
@@ -466,9 +464,21 @@ function AdminPanel() {
               <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Live Preview</span>
-                  <button className="px-2.5 py-1 rounded bg-[#C92C2C] text-white font-bold text-[9px] sm:text-[10px] tracking-widest flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5 fill-white text-[#C92C2C]" />
-                    BROADCAST HALT
+                  <button 
+                    onClick={() => updateOverlayField({ isBroadcastActive: !overlays.isBroadcastActive })}
+                    className={`px-2.5 py-1 rounded text-white font-bold text-[9px] sm:text-[10px] tracking-widest flex items-center gap-1 transition-all ${overlays.isBroadcastActive ? 'bg-[#C92C2C] hover:bg-[#AC2323]' : 'bg-[#50BF7B] hover:bg-[#43A668]'}`}
+                  >
+                    {overlays.isBroadcastActive ? (
+                      <>
+                        <AlertTriangle className="w-3.5 h-3.5 fill-white text-[#C92C2C]" />
+                        BROADCAST HALT
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-3.5 h-3.5 fill-white text-[#50BF7B]" />
+                        RESUME BROADCAST
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -798,7 +808,7 @@ function AdminPanel() {
                         {formatTime(video.duration)}
                       </div>
                       <div className="col-span-2 text-[9px] sm:text-[10px] font-bold text-[#C92C2C] tracking-wider">
-                        {idx === 0 ? '11:23:46' : '12:23:46'}
+                        ---
                       </div>
                       
                       <div className="col-span-2 flex items-center justify-center">
@@ -828,7 +838,7 @@ function AdminPanel() {
                     onChange={(e) => setUploadTitle(e.target.value)}
                     className="bg-[#2a2a2a] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
                   />
-                  <label className="py-3 rounded-lg bg-[#DFDFDF] hover:bg-[#D5D5D5] text-gray-300 font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-gray-700 transition-all shadow-sm cursor-pointer w-full">
+                  <label className="py-3 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] text-white font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-gray-700 transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     Add Video
                     <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
