@@ -630,6 +630,29 @@ function AdminPanel() {
                   </div>
                 </div>
 
+                {/* Direct Stream URL Display */}
+                <div className="mt-4 bg-[#1a1a1a] rounded-xl p-3 border border-pink-600/30 flex flex-col gap-1.5 shadow-lg">
+                  <span className="text-[10px] sm:text-xs font-black text-pink-500 uppercase tracking-widest">Permanent Stream URL (For VLC / IPTV)</span>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="text" 
+                      readOnly
+                      value={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/stream/live.m3u8`}
+                      className="flex-1 bg-black text-gray-300 font-mono text-[9px] sm:text-[10px] px-2.5 py-1.5 rounded border border-gray-800 outline-none select-all cursor-text"
+                      onClick={(e) => e.target.select()}
+                    />
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/stream/live.m3u8`);
+                        alert("Stream URL Copied!");
+                      }}
+                      className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded text-[10px] font-bold transition-all shadow-md whitespace-nowrap"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
+                </div>
+
                 {/* External Live Stream button row */}
                 <div className="mt-4 flex flex-col gap-2 bg-[#1a1a1a] rounded-xl p-3 border border-white/40">
                   <div className="flex gap-2">
