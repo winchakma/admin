@@ -10,6 +10,13 @@ const AdState = require('../models/AdState');
 const Channel = require('../models/Channel');
 const { protect } = require('../middleware/auth');
 
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -64,7 +71,10 @@ router.post('/channels', protect, upload.single('logo'), async (req, res) => {
 
     let logoPath = '';
     if (req.file) {
-      logoPath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+      const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+      const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'image', folder: 'spml/channels' });
+      logoPath = result.secure_url;
+      fs.unlinkSync(fullPath);
     }
 
     const lastItem = await Channel.findOne().sort('-orderIndex');
@@ -202,9 +212,12 @@ router.post('/playlist/upload', protect, upload.single('video'), async (req, res
       return res.status(400).json({ error: 'No video file uploaded' });
     }
 
-    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
-    const fullPath = path.join(__dirname, '..', filePath);
+    const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
     const duration = await getVideoDuration(fullPath);
+
+    const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'video', folder: 'spml/playlist' });
+    const filePath = result.secure_url;
+    fs.unlinkSync(fullPath);
 
     // Get highest orderIndex to place this at the end
     const lastItem = await Playlist.findOne().sort('-orderIndex');
@@ -327,7 +340,10 @@ router.post('/overlays/upload-ots', protect, upload.single('image'), async (req,
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+    const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'image', folder: 'spml/overlays' });
+    const filePath = result.secure_url;
+    fs.unlinkSync(fullPath);
     let config = await Overlay.findOne();
     if (!config) {
       config = new Overlay({ otsImagePath: filePath, otsActive: true });
@@ -366,9 +382,12 @@ router.post('/ads/upload', protect, upload.single('video'), async (req, res) => 
       return res.status(400).json({ error: 'No ad video file uploaded' });
     }
 
-    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
-    const fullPath = path.join(__dirname, '..', filePath);
+    const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
     const duration = await getVideoDuration(fullPath);
+
+    const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'video', folder: 'spml/ads' });
+    const filePath = result.secure_url;
+    fs.unlinkSync(fullPath);
 
     const newAd = new AdItem({
       title: req.body.title || req.file.originalname,

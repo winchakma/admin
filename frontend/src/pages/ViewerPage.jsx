@@ -214,7 +214,7 @@ const ViewerPage = () => {
             {/* OTS graphic overlay */}
             {overlays.otsActive && overlays.otsImagePath && (
               <div className="absolute right-4 bottom-[90px] w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
-                <img src={`${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                <img src={(overlays.otsImagePath.startsWith('http') || overlays.otsImagePath.startsWith('data:')) ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
               </div>
             )}
 
