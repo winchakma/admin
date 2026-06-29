@@ -68,6 +68,9 @@ const startFfmpegStream = (inputVideoPath) => {
     .output(outputPath)
     .on('start', (commandLine) => {
       console.log('Spawned FFmpeg with command: ' + commandLine);
+      try {
+        fs.writeFileSync(path.join(__dirname, 'uploads', 'ffmpeg-debug.txt'), 'Spawned FFmpeg with command: ' + commandLine + '\\n\\n');
+      } catch(e) {}
     })
     .on('error', (err, stdout, stderr) => {
       if (err.message.includes('SIGKILL')) {
@@ -75,6 +78,9 @@ const startFfmpegStream = (inputVideoPath) => {
       } else {
         console.error('FFmpeg Error:', err.message);
         console.error('FFmpeg Stderr:', stderr);
+        try {
+          fs.appendFileSync(path.join(__dirname, 'uploads', 'ffmpeg-debug.txt'), 'Error: ' + err.message + '\\nStderr:\\n' + stderr + '\\n\\n');
+        } catch(e) {}
       }
     })
     .on('end', () => {
