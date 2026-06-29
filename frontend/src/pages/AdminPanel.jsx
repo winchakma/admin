@@ -539,13 +539,15 @@ function AdminPanel() {
                     </button>
                   )}
 
-                  <div className="absolute top-2.5 left-2.5 bg-[#111111] border border-gray-800 text-white font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20 overflow-hidden">
-                    {overlays.logoActive && overlays.logoImagePath ? (
-                      <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="max-w-full max-h-full object-contain" />
-                    ) : (
-                      "Logo"
-                    )}
-                  </div>
+                  {overlays.logoActive && (
+                    <div className="absolute top-2.5 left-2.5 bg-[#111111] border border-gray-800 text-white font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20 overflow-hidden">
+                      {overlays.logoImagePath ? (
+                        <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      ) : (
+                        "Logo"
+                      )}
+                    </div>
+                  )}
 
                   {/* OTS Overlay */}
                   {overlays.otsActive && overlays.otsImagePath && (
