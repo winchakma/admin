@@ -241,14 +241,20 @@ const manageLocalPlayout = (selectedItem, offset) => {
 
   // Video changed, start new FFmpeg stream
   currentFfmpegVideoId = selectedItem.id || selectedItem._id?.toString();
-  const inputVideoPath = path.join(__dirname, '..', selectedItem.filePath);
   
-  if (fs.existsSync(inputVideoPath)) {
-    console.log(`[FFmpeg CG] Starting broadcast stream for: ${selectedItem.title}`);
-    startFfmpegStream(inputVideoPath);
-  } else {
-    console.log(`[FFmpeg CG] Cannot start stream. Video file missing: ${inputVideoPath}`);
+  const isExternalUrl = selectedItem.filePath.startsWith('http://') || selectedItem.filePath.startsWith('https://');
+  let inputVideoPath = selectedItem.filePath;
+  
+  if (!isExternalUrl) {
+    inputVideoPath = path.join(__dirname, '..', selectedItem.filePath);
+    if (!fs.existsSync(inputVideoPath)) {
+      console.log(`[FFmpeg CG] Cannot start stream. Local video file missing: ${inputVideoPath}`);
+      return;
+    }
   }
+
+  console.log(`[FFmpeg CG] Starting broadcast stream for: ${selectedItem.title}`);
+  startFfmpegStream(inputVideoPath);
 };
 
 module.exports = { startScheduler };
