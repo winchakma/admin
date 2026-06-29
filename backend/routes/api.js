@@ -212,12 +212,9 @@ router.post('/playlist/upload', protect, upload.single('video'), async (req, res
       return res.status(400).json({ error: 'No video file uploaded' });
     }
 
-    const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    const fullPath = path.join(__dirname, '..', filePath);
     const duration = await getVideoDuration(fullPath);
-
-    const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'video', folder: 'spml/playlist' });
-    const filePath = result.secure_url;
-    fs.unlinkSync(fullPath);
 
     // Get highest orderIndex to place this at the end
     const lastItem = await Playlist.findOne().sort('-orderIndex');
@@ -382,12 +379,9 @@ router.post('/ads/upload', protect, upload.single('video'), async (req, res) => 
       return res.status(400).json({ error: 'No ad video file uploaded' });
     }
 
-    const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    const fullPath = path.join(__dirname, '..', filePath);
     const duration = await getVideoDuration(fullPath);
-
-    const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'video', folder: 'spml/ads' });
-    const filePath = result.secure_url;
-    fs.unlinkSync(fullPath);
 
     const newAd = new AdItem({
       title: req.body.title || req.file.originalname,
