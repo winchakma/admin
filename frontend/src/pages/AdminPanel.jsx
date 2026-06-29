@@ -1061,23 +1061,6 @@ function AdminPanel() {
           </div>
         )}
 
-        {/* Bottom section: Video Gallery folder tabs */}
-        {activeTab === 'admin' && (
-          <div className="w-full max-w-7xl mx-auto mt-8">
-            <div className="inline-flex">
-              <div className="px-6 py-2.5 rounded-t-xl bg-[#2a2a2a] border-t border-x border-gray-700/60 font-bold text-xs tracking-wider text-white">
-                Video Gallery
-              </div>
-            </div>
-            <div className="bg-[#2a2a2a] rounded-b-xl rounded-tr-xl p-6 border border-gray-700/60 shadow-sm min-h-[120px] flex flex-col gap-4">
-              <span className="text-xs font-bold text-[#666666] tracking-wider border-b pb-1">News</span>
-              <div className="flex gap-4">
-                {/* Gallery item mocks */}
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
