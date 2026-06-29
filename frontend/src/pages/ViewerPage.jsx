@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
 import Hls from 'hls.js';
-import { Play } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Settings, CircleDot } from 'lucide-react';
 
 const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
 
 const ViewerPage = () => {
   const [isMuted, setIsMuted] = useState(true);
+  const [volume, setVolume] = useState(1);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const videoRef = useRef(null);
+  const wrapperRef = useRef(null);
   const hlsRef = useRef(null);
   const socketRef = useRef(null);
 
@@ -141,8 +145,11 @@ const ViewerPage = () => {
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
+    setIsPaused(false);
     if (videoRef.current) {
       videoRef.current.play().catch(err => console.log(err));
+      videoRef.current.muted = false;
+      videoRef.current.volume = volume;
     }
   };
 
@@ -160,7 +167,12 @@ const ViewerPage = () => {
       </header>
 
       {/* Main Video Player aligned with Admin Preview */}
-      <div className="w-full max-w-6xl mx-auto bg-black rounded-lg overflow-hidden shadow-2xl relative aspect-video mt-10">
+      <div 
+        ref={wrapperRef}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        className="w-full max-w-6xl mx-auto bg-black rounded-lg overflow-hidden shadow-2xl relative aspect-video mt-10 group"
+      >
         {status.activeVideo && overlays.isBroadcastActive ? (
           <video 
             ref={videoRef} 
@@ -245,6 +257,84 @@ const ViewerPage = () => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Custom TV Player Control Bar */}
+            <div 
+              className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16 pb-3 px-4 z-30 transition-opacity duration-300 ${isHovering || isPaused || isMuted ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <div className="flex items-center justify-between">
+                {/* Left Controls */}
+                <div className="flex items-center space-x-4">
+                  <button onClick={() => {
+                    if (videoRef.current) {
+                      if (isPaused) {
+                        videoRef.current.play();
+                        setIsPaused(false);
+                      } else {
+                        videoRef.current.pause();
+                        setIsPaused(true);
+                      }
+                    }
+                  }} className="text-white hover:text-pink-500 transition-colors">
+                    {isPaused || isMuted ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+                  </button>
+                  
+                  <div className="flex items-center space-x-2 group/volume relative">
+                    <button onClick={() => {
+                      if (videoRef.current) {
+                        if (isMuted) {
+                          videoRef.current.muted = false;
+                          videoRef.current.volume = volume === 0 ? 0.5 : volume;
+                          setIsMuted(false);
+                          if (volume === 0) setVolume(0.5);
+                        } else {
+                          videoRef.current.muted = true;
+                          setIsMuted(true);
+                        }
+                      }
+                    }} className="text-white hover:text-pink-500 transition-colors">
+                      {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                    </button>
+                    <input 
+                      type="range" 
+                      min="0" max="1" step="0.05"
+                      value={isMuted ? 0 : volume}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setVolume(val);
+                        if (videoRef.current) {
+                          videoRef.current.volume = val;
+                          videoRef.current.muted = val === 0;
+                        }
+                        setIsMuted(val === 0);
+                      }}
+                      className="w-0 opacity-0 group-hover/volume:w-20 group-hover/volume:opacity-100 transition-all duration-300 accent-pink-500 cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-1.5 ml-2">
+                    <CircleDot className="w-3 h-3 text-red-500 animate-pulse" />
+                    <span className="text-white font-bold text-xs tracking-widest uppercase">Live</span>
+                  </div>
+                </div>
+
+                {/* Right Controls */}
+                <div className="flex items-center space-x-4">
+                  <button className="text-white hover:text-pink-500 transition-colors flex items-center gap-1 text-xs font-bold tracking-wider">
+                    <Settings className="w-4 h-4" /> HD
+                  </button>
+                  <button onClick={() => {
+                    if (!document.fullscreenElement) {
+                      wrapperRef.current?.requestFullscreen().catch(err => console.log(err));
+                    } else {
+                      document.exitFullscreen();
+                    }
+                  }} className="text-white hover:text-pink-500 transition-colors ml-2">
+                    <Maximize className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </>
         )}
