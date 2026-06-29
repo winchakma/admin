@@ -311,6 +311,15 @@ router.post('/overlays', protect, async (req, res) => {
     }
     await config.save();
 
+    // Write text values to files for FFmpeg CG Engine
+    const streamDataDir = path.join(__dirname, '..', 'stream_data');
+    if (!fs.existsSync(streamDataDir)) {
+      fs.mkdirSync(streamDataDir, { recursive: true });
+    }
+    fs.writeFileSync(path.join(streamDataDir, 'ticker1.txt'), config.ticker1Active ? config.ticker1Text || '' : '', 'utf8');
+    fs.writeFileSync(path.join(streamDataDir, 'ticker2.txt'), config.ticker2Active ? config.ticker2Text || '' : '', 'utf8');
+
+
     // Notify clients about overlay configuration change
     if (req.app.get('io')) {
       req.app.get('io').emit('overlays_updated', config);

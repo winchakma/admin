@@ -6,6 +6,7 @@ const Overlay = require('./models/Overlay');
 const AdState = require('./models/AdState');
 const AdItem = require('./models/AdItem');
 const https = require('https');
+const { startFfmpegStream, stopFfmpegStream } = require('./ffmpegEngine');
 
 let todayPrayerTimes = null;
 let azanPlayedToday = {
@@ -222,20 +223,32 @@ const startScheduler = (io) => {
 };
 
 // Manage backend HLS stitching using FFmpeg
+let currentFfmpegVideoId = null;
+
 const manageLocalPlayout = (selectedItem, offset) => {
-  // Check if we already have an active playout stream running
-  // For production / VPS playout, this spawns FFmpeg to generate segments.
-  // If FFmpeg is missing on local test machines, the scheduler will gracefully
-  // fallback to broadcasting WebSockets metadata so the client React UI plays the simulation correctly.
-  
-  // Playout check hook
-  if (activeFfmpegProcess) {
-    // If active process is running, we let it run and stitch
+  if (!selectedItem) {
+    if (currentFfmpegVideoId !== null) {
+      stopFfmpegStream();
+      currentFfmpegVideoId = null;
+    }
     return;
   }
 
-  // In production, we run the FFmpeg transcoder and stitcher feed
-  // For this demonstration, we start transcoding simulation or invoke FFmpeg if available
+  // If the video hasn't changed, let the current FFmpeg process run
+  if (currentFfmpegVideoId === selectedItem.id || currentFfmpegVideoId === selectedItem._id?.toString()) {
+    return;
+  }
+
+  // Video changed, start new FFmpeg stream
+  currentFfmpegVideoId = selectedItem.id || selectedItem._id?.toString();
+  const inputVideoPath = path.join(__dirname, '..', selectedItem.filePath);
+  
+  if (fs.existsSync(inputVideoPath)) {
+    console.log(`[FFmpeg CG] Starting broadcast stream for: ${selectedItem.title}`);
+    startFfmpegStream(inputVideoPath);
+  } else {
+    console.log(`[FFmpeg CG] Cannot start stream. Video file missing: ${inputVideoPath}`);
+  }
 };
 
 module.exports = { startScheduler };
