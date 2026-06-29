@@ -424,14 +424,7 @@ function AdminPanel() {
       
       {/* DESKTOP SIDEBAR NAVIGATION */}
       <div className="hidden sm:flex w-16 bg-[#111111] border-r border-gray-800 flex-col items-center py-6 justify-between shrink-0">
-        <div className="flex flex-col gap-6 items-center w-full">
-          <div className="flex flex-col items-center mb-2">
-            {overlays.logoImagePath ? (
-              <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} className="w-10 h-10 object-contain rounded mb-1" alt="Site Logo" />
-            ) : (
-              <div className="text-[10px] font-black text-white tracking-wider text-center uppercase">Site<br/>Logo</div>
-            )}
-          </div>
+        <div className="flex flex-col gap-6 items-center w-full mt-2">
           
           <button 
             onClick={() => setActiveTab('admin')} 
