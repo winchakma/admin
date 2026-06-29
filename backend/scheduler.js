@@ -17,7 +17,18 @@ let azanPlayedToday = {
   dateFetched: null
 };
 
-const fetchPrayerTimes = () => {
+// Fixed prayer schedule provided by the client
+const staticPrayerTimes = {
+  0: { Fajr: '03:49', Zohr: '12:03', Asr: '15:22', Maghrib: '18:49', Isha: '20:17' }, // Sunday
+  1: { Fajr: '03:46', Zohr: '12:02', Asr: '15:20', Maghrib: '18:50', Isha: '20:19' }, // Monday
+  2: { Fajr: '03:47', Zohr: '12:02', Asr: '15:21', Maghrib: '18:50', Isha: '20:19' }, // Tuesday
+  3: { Fajr: '03:47', Zohr: '12:02', Asr: '15:21', Maghrib: '18:50', Isha: '20:17' }, // Wednesday
+  4: { Fajr: '03:48', Zohr: '12:02', Asr: '15:21', Maghrib: '18:50', Isha: '20:17' }, // Thursday
+  5: { Fajr: '03:48', Zohr: '12:03', Asr: '15:22', Maghrib: '18:50', Isha: '20:17' }, // Friday
+  6: { Fajr: '03:48', Zohr: '12:03', Asr: '15:22', Maghrib: '18:50', Isha: '20:17' }  // Saturday
+};
+
+const updatePrayerTimes = () => {
   const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
   const day = d.getDate().toString().padStart(2, '0');
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -26,44 +37,22 @@ const fetchPrayerTimes = () => {
 
   if (azanPlayedToday.dateFetched === dateStr) return;
 
-  const url = `https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Dhaka&country=Bangladesh&method=1`;
+  const currentDayOfWeek = d.getDay(); // 0-6
+  todayPrayerTimes = staticPrayerTimes[currentDayOfWeek];
   
-  https.get(url, (res) => {
-    let data = '';
-    res.on('data', (chunk) => data += chunk);
-    res.on('end', () => {
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.data && parsed.data.timings) {
-          const t = parsed.data.timings;
-          todayPrayerTimes = {
-            Fajr: t.Fajr,
-            Zohr: t.Dhuhr,
-            Asr: t.Asr,
-            Maghrib: t.Maghrib,
-            Isha: t.Isha
-          };
-          azanPlayedToday = {
-            Fajr: false,
-            Zohr: false,
-            Asr: false,
-            Maghrib: false,
-            Isha: false,
-            dateFetched: dateStr
-          };
-          console.log(`[Azan System] Fetched Prayer Times for Dhaka (${dateStr}):`, todayPrayerTimes);
-        }
-      } catch (err) {
-        console.error('[Azan System] Error parsing prayer times:', err.message);
-      }
-    });
-  }).on('error', (err) => {
-    console.error('[Azan System] Error fetching prayer times:', err.message);
-  });
+  azanPlayedToday = {
+    Fajr: false,
+    Zohr: false,
+    Asr: false,
+    Maghrib: false,
+    Isha: false,
+    dateFetched: dateStr
+  };
+  console.log(`[Azan System] Loaded Static Prayer Times for Dhaka (${dateStr}):`, todayPrayerTimes);
 };
 
 // Fetch immediately on startup
-fetchPrayerTimes();
+updatePrayerTimes();
 
 let activeFfmpegProcess = null;
 let currentStatus = {
@@ -95,7 +84,7 @@ const startScheduler = (io) => {
       }
 
       // 1. Fetch new prayer times if day changed in Dhaka
-      fetchPrayerTimes();
+      updatePrayerTimes();
 
       // 2. Check if it's Azan time right now
       if (todayPrayerTimes && (!adState.activeAd || !adState.activeAd.startedAt)) {
