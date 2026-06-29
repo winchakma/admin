@@ -71,6 +71,7 @@ function AdminPanel() {
   const [ads, setAds] = useState([]);
   const [adTitle, setAdTitle] = useState('');
   const [isAdUploading, setIsAdUploading] = useState(false);
+  const [isPushingLive, setIsPushingLive] = useState(false);
 
 
   // Live time and date updater
@@ -669,8 +670,18 @@ function AdminPanel() {
               <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-5">
                 <div className="flex justify-between items-center">
                   <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">News Ticker</span>
-                  <button className="w-6 h-6 rounded-full bg-[#E95C5C]/20 hover:bg-[#E95C5C]/35 text-[#C92C2C] flex items-center justify-center transition-all">
-                    <Play className="w-3.5 h-3.5 fill-[#C92C2C] stroke-none" />
+                  <button 
+                    onClick={() => {
+                      setIsPushingLive(true);
+                      updateOverlayField({ 
+                        ticker1Active: !!overlays.ticker1Text,
+                        ticker2Active: !!overlays.ticker2Text,
+                      }, false);
+                      setTimeout(() => setIsPushingLive(false), 1000);
+                    }}
+                    className={`px-3 py-1.5 rounded font-extrabold text-[9px] sm:text-[10px] tracking-wide shadow-sm transition-all flex items-center gap-1 ${isPushingLive ? 'bg-[#50BF7B] text-white' : 'bg-[#C92C2C] hover:bg-[#AC2323] text-white'}`}
+                  >
+                    {isPushingLive ? 'SAVED TO LIVE!' : 'PUSH TO LIVE'}
                   </button>
                 </div>
 

@@ -305,7 +305,7 @@ router.post('/overlays', protect, async (req, res) => {
     if (!config) {
       config = new Overlay(req.body);
     } else {
-      Object.assign(config, req.body);
+      config.set(req.body);
     }
     await config.save();
 
