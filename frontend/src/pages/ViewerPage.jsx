@@ -11,6 +11,8 @@ const ViewerPage = () => {
   const [volume, setVolume] = useState(1);
   const [isHovering, setIsHovering] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [selectedQuality, setSelectedQuality] = useState('Auto');
   const videoRef = useRef(null);
   const wrapperRef = useRef(null);
   const hlsRef = useRef(null);
@@ -321,9 +323,36 @@ const ViewerPage = () => {
 
                 {/* Right Controls */}
                 <div className="flex items-center space-x-4">
-                  <button className="text-white hover:text-pink-500 transition-colors flex items-center gap-1 text-xs font-bold tracking-wider">
-                    <Settings className="w-4 h-4" /> HD
-                  </button>
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                      className="text-white hover:text-pink-500 transition-colors flex items-center gap-1 text-xs font-bold tracking-wider"
+                    >
+                      <Settings className={`w-4 h-4 transition-transform duration-300 ${showSettingsMenu ? 'rotate-90 text-pink-500' : ''}`} /> 
+                      {selectedQuality === 'Auto' ? 'HD' : selectedQuality}
+                    </button>
+                    
+                    {/* Quality Settings Dropdown */}
+                    {showSettingsMenu && (
+                      <div className="absolute bottom-full right-0 mb-4 w-32 bg-black/95 backdrop-blur-sm border border-gray-700 rounded-md shadow-2xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div className="px-3 py-2 text-xs font-bold text-gray-400 border-b border-gray-800 uppercase tracking-wider">Quality</div>
+                        {['Auto', '1080p', '720p', '480p', '360p'].map(q => (
+                          <button
+                            key={q}
+                            onClick={() => {
+                              setSelectedQuality(q);
+                              setShowSettingsMenu(false);
+                              // Note: Real HLS level switching would happen here via hlsRef.current.currentLevel
+                            }}
+                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-white/10 transition-colors flex items-center justify-between ${selectedQuality === q ? 'text-pink-500 font-bold bg-white/5' : 'text-white'}`}
+                          >
+                            {q}
+                            {selectedQuality === q && <CircleDot className="w-2 h-2 text-pink-500" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button onClick={() => {
                     if (!document.fullscreenElement) {
                       wrapperRef.current?.requestFullscreen().catch(err => console.log(err));
