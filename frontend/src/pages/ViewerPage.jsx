@@ -315,10 +315,19 @@ const ViewerPage = () => {
                     />
                   </div>
 
-                  <div className="flex items-center space-x-1.5 ml-2">
+                  <button 
+                    onClick={() => {
+                      if (videoRef.current && status.activeVideo) {
+                        videoRef.current.currentTime = status.activeVideo.offset;
+                        videoRef.current.play().catch(e => console.log(e));
+                        setIsPaused(false);
+                      }
+                    }}
+                    className="flex items-center space-x-1.5 ml-2 cursor-pointer hover:opacity-75 transition-opacity"
+                  >
                     <CircleDot className="w-3 h-3 text-red-500 animate-pulse" />
                     <span className="text-white font-bold text-xs tracking-widest uppercase">Live</span>
-                  </div>
+                  </button>
                 </div>
 
                 {/* Right Controls */}

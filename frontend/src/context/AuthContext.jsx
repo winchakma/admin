@@ -21,15 +21,23 @@ export const AuthProvider = ({ children }) => {
             'Authorization': `Bearer ${token}`
           }
         });
-        const data = await res.json();
-        if (data.success) {
-          setUser(data.user);
-        } else {
+        
+        if (res.status === 401 || res.status === 403) {
           logout();
+          return;
+        }
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setUser(data.user);
+          } else {
+            logout();
+          }
         }
       } catch (err) {
-        console.error("Auth verify failed:", err);
-        logout();
+        console.error("Auth verify failed (network error), keeping token:", err);
+        // Do NOT call logout() here! If the backend is sleeping, we don't want to wipe the token.
       } finally {
         setLoading(false);
       }

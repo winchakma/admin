@@ -62,6 +62,7 @@ function AdminPanel() {
 
   const [uploadTitle, setUploadTitle] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [currentDateStr, setCurrentDateStr] = useState('');
   const socketRef = useRef(null);
@@ -306,7 +307,8 @@ function AdminPanel() {
   // Video file upload
   const handleVideoUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || isSubmitting) return;
+    setIsSubmitting(true);
 
     const formData = new FormData();
     formData.append('video', file);
@@ -322,12 +324,17 @@ function AdminPanel() {
       setUploadTitle('');
     } catch (err) {
       console.warn('Upload failed');
+    } finally {
+      setIsSubmitting(false);
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
     }
   };
 
   // External live link upload
   const handleAddExternalLink = async () => {
-    if (!externalUrl) return;
+    if (!externalUrl || isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/playlist`, {
@@ -347,6 +354,8 @@ function AdminPanel() {
       setUploadTitle('');
     } catch (err) {
       console.warn('Failed to add external stream link');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -575,9 +584,10 @@ function AdminPanel() {
                     />
                     <button 
                       onClick={handleAddExternalLink}
-                      className="px-4 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs tracking-wide transition-all shadow-sm"
+                      disabled={isSubmitting}
+                      className={`px-4 py-1.5 rounded-lg text-white font-bold text-xs tracking-wide transition-all shadow-sm ${isSubmitting ? 'bg-gray-600 cursor-not-allowed' : 'bg-pink-600 hover:bg-pink-700'}`}
                     >
-                      Connect
+                      {isSubmitting ? '...' : 'Connect'}
                     </button>
                   </div>
                   <button className="w-full py-2 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] text-gray-300 border border-gray-700 flex items-center justify-center gap-1 text-xs font-bold transition-all shadow-sm">
