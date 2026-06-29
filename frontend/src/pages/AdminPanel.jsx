@@ -393,6 +393,25 @@ function AdminPanel() {
     }
   };
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      await apiFetch(`${SOCKET_URL}/api/overlays/upload-logo`, {
+        method: 'POST',
+        body: formData
+      });
+    } catch (err) {
+      console.warn('Logo upload failed');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const formatTime = (seconds) => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -406,7 +425,17 @@ function AdminPanel() {
       {/* DESKTOP SIDEBAR NAVIGATION */}
       <div className="hidden sm:flex w-16 bg-[#111111] border-r border-gray-800 flex-col items-center py-6 justify-between shrink-0">
         <div className="flex flex-col gap-6 items-center w-full">
-          <div className="text-[10px] font-black text-white tracking-wider mb-2 text-center uppercase">Site<br/>Logo</div>
+          <label className="text-[10px] font-black text-white tracking-wider mb-2 text-center uppercase cursor-pointer hover:text-pink-500 transition-colors flex flex-col items-center group relative">
+            {overlays.logoImagePath ? (
+              <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} className="w-10 h-10 object-contain rounded mb-1" alt="Site Logo" />
+            ) : (
+              <>Site<br/>Logo</>
+            )}
+            <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Upload className="w-4 h-4 text-white" />
+            </div>
+            <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+          </label>
           
           <button 
             onClick={() => setActiveTab('admin')} 
@@ -521,8 +550,12 @@ function AdminPanel() {
                     </button>
                   )}
 
-                  <div className="absolute top-2.5 left-2.5 bg-[#111111] border border-gray-800 text-white font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20">
-                    Logo
+                  <div className="absolute top-2.5 left-2.5 bg-[#111111] border border-gray-800 text-white font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20 overflow-hidden">
+                    {overlays.logoActive && overlays.logoImagePath ? (
+                      <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      "Logo"
+                    )}
                   </div>
 
                   {/* OTS Overlay */}

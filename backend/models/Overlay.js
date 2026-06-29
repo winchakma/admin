@@ -33,6 +33,14 @@ const OverlaySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  logoImagePath: {
+    type: String,
+    default: ''
+  },
+  logoActive: {
+    type: Boolean,
+    default: true
+  },
   showTime: {
     type: Boolean,
     default: true

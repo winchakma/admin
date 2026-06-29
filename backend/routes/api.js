@@ -347,6 +347,33 @@ router.post('/overlays/upload-ots', protect, upload.single('image'), async (req,
   }
 });
 
+// Upload Stream Logo Image
+router.post('/overlays/upload-logo', protect, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    let config = await Overlay.findOne();
+    if (!config) {
+      config = new Overlay({ logoImagePath: filePath, logoActive: true });
+    } else {
+      config.logoImagePath = filePath;
+      config.logoActive = true;
+    }
+    await config.save();
+
+    if (req.app.get('io')) {
+      req.app.get('io').emit('overlays_updated', config);
+    }
+
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* --- Ad Playlist & Playout Routes --- */
 
 // Get all ad items

@@ -207,8 +207,12 @@ const ViewerPage = () => {
         {overlays.isBroadcastActive && (
           <>
             {/* Site Logo */}
-            <div className="absolute top-4 left-4 bg-[#111111] border border-gray-800 text-white font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20">
-              Logo
+            <div className="absolute top-4 left-4 bg-[#111111] border border-gray-800 text-white font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20 overflow-hidden">
+              {overlays.logoActive && overlays.logoImagePath ? (
+                <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="max-w-full max-h-full object-contain" />
+              ) : (
+                "Logo"
+              )}
             </div>
 
             {/* OTS graphic overlay */}
