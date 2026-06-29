@@ -11,6 +11,7 @@ const ViewerPage = () => {
   const [volume, setVolume] = useState(1);
   const [isHovering, setIsHovering] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const hideControlsTimeoutRef = useRef(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState('Auto');
   const videoRef = useRef(null);
@@ -68,6 +69,22 @@ const ViewerPage = () => {
       setCurrentDayStr(days[d.getDay()]);
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Idle timer for hiding controls
+  const resetIdleTimer = () => {
+    setIsHovering(true);
+    if (hideControlsTimeoutRef.current) {
+      clearTimeout(hideControlsTimeoutRef.current);
+    }
+    hideControlsTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false);
+    }, 2500); // Hide after 2.5 seconds of inactivity
+  };
+
+  useEffect(() => {
+    resetIdleTimer();
+    return () => clearTimeout(hideControlsTimeoutRef.current);
   }, []);
 
   // Connect Socket.io
@@ -184,9 +201,14 @@ const ViewerPage = () => {
       {/* Main Video Player aligned with Admin Preview */}
       <div 
         ref={wrapperRef}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        className="w-full max-w-6xl mx-auto bg-black rounded-lg overflow-hidden shadow-2xl relative aspect-video mt-10 group"
+        onMouseMove={resetIdleTimer}
+        onClick={resetIdleTimer}
+        onTouchStart={resetIdleTimer}
+        onMouseLeave={() => {
+          setIsHovering(false);
+          clearTimeout(hideControlsTimeoutRef.current);
+        }}
+        className={`w-full max-w-6xl mx-auto bg-black rounded-lg overflow-hidden shadow-2xl relative aspect-video mt-10 group ${!isHovering ? 'cursor-none' : ''}`}
       >
         {status.activeVideo && overlays.isBroadcastActive ? (
           <video 
