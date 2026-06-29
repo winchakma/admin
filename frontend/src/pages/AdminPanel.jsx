@@ -670,7 +670,7 @@ function AdminPanel() {
                     placeholder="Enter ad title (optional)" 
                     value={adTitle} 
                     onChange={(e) => setAdTitle(e.target.value)}
-                    className="bg-[#F0F0F0] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
+                    className="bg-[#2a2a2a] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
                   />
                   <label className="py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />

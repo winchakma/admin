@@ -4,6 +4,66 @@ const { spawn } = require('child_process');
 const Playlist = require('./models/Playlist');
 const Overlay = require('./models/Overlay');
 const AdState = require('./models/AdState');
+const AdItem = require('./models/AdItem');
+const https = require('https');
+
+let todayPrayerTimes = null;
+let azanPlayedToday = {
+  Fajr: false,
+  Zohr: false,
+  Asr: false,
+  Maghrib: false,
+  Isha: false,
+  dateFetched: null
+};
+
+const fetchPrayerTimes = () => {
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  const dateStr = `${day}-${month}-${year}`;
+
+  if (azanPlayedToday.dateFetched === dateStr) return;
+
+  const url = `https://api.aladhan.com/v1/timingsByCity/${dateStr}?city=Dhaka&country=Bangladesh&method=1`;
+  
+  https.get(url, (res) => {
+    let data = '';
+    res.on('data', (chunk) => data += chunk);
+    res.on('end', () => {
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.data && parsed.data.timings) {
+          const t = parsed.data.timings;
+          todayPrayerTimes = {
+            Fajr: t.Fajr,
+            Zohr: t.Dhuhr,
+            Asr: t.Asr,
+            Maghrib: t.Maghrib,
+            Isha: t.Isha
+          };
+          azanPlayedToday = {
+            Fajr: false,
+            Zohr: false,
+            Asr: false,
+            Maghrib: false,
+            Isha: false,
+            dateFetched: dateStr
+          };
+          console.log(`[Azan System] Fetched Prayer Times for Dhaka (${dateStr}):`, todayPrayerTimes);
+        }
+      } catch (err) {
+        console.error('[Azan System] Error parsing prayer times:', err.message);
+      }
+    });
+  }).on('error', (err) => {
+    console.error('[Azan System] Error fetching prayer times:', err.message);
+  });
+};
+
+// Fetch immediately on startup
+fetchPrayerTimes();
 
 let activeFfmpegProcess = null;
 let currentStatus = {
@@ -32,6 +92,49 @@ const startScheduler = (io) => {
       } else if (typeof adState.totalAdTimeOffset !== 'number' || isNaN(adState.totalAdTimeOffset)) {
         adState.totalAdTimeOffset = 0;
         await adState.save();
+      }
+
+      // 1. Fetch new prayer times if day changed in Dhaka
+      fetchPrayerTimes();
+
+      // 2. Check if it's Azan time right now
+      if (todayPrayerTimes && (!adState.activeAd || !adState.activeAd.startedAt)) {
+        const dhakaDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+        const hh = dhakaDate.getHours().toString().padStart(2, '0');
+        const mm = dhakaDate.getMinutes().toString().padStart(2, '0');
+        const currentDhakaTimeStr = `${hh}:${mm}`;
+
+        for (const [prayer, time] of Object.entries(todayPrayerTimes)) {
+          if (currentDhakaTimeStr === time && !azanPlayedToday[prayer]) {
+            azanPlayedToday[prayer] = true;
+            console.log(`[Azan System] It is exactly time for ${prayer} Azan (${time}). Triggering video...`);
+
+            try {
+              // Priority 1: Exact match (e.g. "Maghrib")
+              let azanAd = await AdItem.findOne({ title: { $regex: new RegExp(`^${prayer}$`, 'i') } });
+              
+              // Priority 2: Loose match (e.g. "Maghrib Azan")
+              if (!azanAd) {
+                azanAd = await AdItem.findOne({ title: { $regex: new RegExp(prayer, 'i') } });
+              }
+
+              if (azanAd) {
+                adState.activeAd = {
+                  title: `[AZAN] ${azanAd.title}`,
+                  filePath: azanAd.filePath,
+                  duration: azanAd.duration,
+                  startedAt: new Date()
+                };
+                await adState.save();
+                console.log(`[Azan System] Successfully injected ${prayer} video into broadcast queue.`);
+              } else {
+                console.log(`[Azan System] Could not find an uploaded Ad containing "${prayer}" in its title.`);
+              }
+            } catch (err) {
+              console.error(`[Azan System] Database error while finding ${prayer} Azan video:`, err);
+            }
+          }
+        }
       }
 
       const overlayConfig = await Overlay.findOne() || {};
