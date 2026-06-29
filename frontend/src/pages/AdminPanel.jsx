@@ -561,21 +561,21 @@ function AdminPanel() {
                   )}
 
                   {/* Tickers & Time/Date Aligned Bottom Rows */}
-                  <div className="absolute bottom-1 left-1 right-1 flex flex-col gap-0.5 z-20 text-[6px] sm:text-[8px] font-bold text-white select-none">
+                  <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-0.5 z-20 text-[8px] sm:text-[10px] font-bold text-white select-none drop-shadow">
                     {/* Row 1 (Ticker 1 & Time) */}
                     {overlays.ticker1Active && (
-                      <div className="flex gap-0.5 w-full">
+                      <div className="flex w-full shadow-lg">
                         {/* Ticker 1 Title */}
-                        <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
+                        <div className="bg-[#111111] border-r border-pink-600 px-2 py-1 rounded-l min-w-[15%] text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap">
                           {overlays.ticker1Title}
                         </div>
                         {/* Ticker 1 Text */}
-                        <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
-                          <marquee className="font-normal flex-1" scrollamount="1.5">{overlays.ticker1Text}</marquee>
+                        <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-2 py-1 flex items-center overflow-hidden">
+                          <marquee className="font-normal flex-1 text-gray-100" scrollamount="2">{overlays.ticker1Text}</marquee>
                         </div>
                         {/* Time */}
                         {overlays.showTime && (
-                          <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
+                          <div className="bg-black/90 backdrop-blur border border-gray-800 px-2 py-1 rounded-r min-w-[12%] text-center font-mono flex items-center justify-center text-gray-300">
                             {currentTimeStr || 'Time'}
                           </div>
                         )}
@@ -584,18 +584,18 @@ function AdminPanel() {
 
                     {/* Row 2 (Ticker 2 & Date) */}
                     {overlays.ticker2Active && (
-                      <div className="flex gap-0.5 w-full">
+                      <div className="flex w-full shadow-lg">
                         {/* Ticker 2 Title */}
-                        <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-l min-w-[50px] sm:min-w-[70px] text-center flex items-center justify-center">
+                        <div className="bg-[#111111] border-r border-blue-600 px-2 py-1 rounded-l min-w-[15%] text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap">
                           {overlays.ticker2Title}
                         </div>
                         {/* Ticker 2 Text */}
-                        <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-1.5 py-0.5 flex items-center overflow-hidden">
-                          <marquee className="font-normal flex-1" scrollamount="2">{overlays.ticker2Text}</marquee>
+                        <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-2 py-1 flex items-center overflow-hidden">
+                          <marquee className="font-normal flex-1 text-gray-100" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                         </div>
                         {/* Date */}
                         {overlays.showDate && (
-                          <div className="bg-[#111111] border border-gray-800 px-1.5 py-0.5 rounded-r min-w-[45px] sm:min-w-[60px] text-center font-mono flex items-center justify-center">
+                          <div className="bg-black/90 backdrop-blur border border-gray-800 px-2 py-1 rounded-r min-w-[12%] text-center font-mono flex items-center justify-center text-gray-300">
                             {currentDateStr || 'Date'}
                           </div>
                         )}
