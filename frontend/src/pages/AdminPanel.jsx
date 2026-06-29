@@ -95,7 +95,8 @@ function AdminPanel() {
   // Live time and date updater
   useEffect(() => {
     const timer = setInterval(() => {
-      const d = new Date();
+      // Force Bangladesh Standard Time (UTC+6)
+      const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
       
       // Format time as hh:mm:ss
       const hours = d.getHours().toString().padStart(2, '0');
