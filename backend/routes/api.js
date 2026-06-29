@@ -10,14 +10,6 @@ const AdState = require('../models/AdState');
 const Channel = require('../models/Channel');
 const { protect } = require('../middleware/auth');
 
-const cloudinary = require('cloudinary').v2;
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -71,10 +63,7 @@ router.post('/channels', protect, upload.single('logo'), async (req, res) => {
 
     let logoPath = '';
     if (req.file) {
-      const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
-      const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'image', folder: 'spml/channels' });
-      logoPath = result.secure_url;
-      fs.unlinkSync(fullPath);
+      logoPath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
     }
 
     const lastItem = await Channel.findOne().sort('-orderIndex');
@@ -337,10 +326,7 @@ router.post('/overlays/upload-ots', protect, upload.single('image'), async (req,
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
-    const result = await cloudinary.uploader.upload(fullPath, { resource_type: 'image', folder: 'spml/overlays' });
-    const filePath = result.secure_url;
-    fs.unlinkSync(fullPath);
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
     let config = await Overlay.findOne();
     if (!config) {
       config = new Overlay({ otsImagePath: filePath, otsActive: true });

@@ -528,7 +528,7 @@ function AdminPanel() {
                   {/* OTS Overlay */}
                   {overlays.otsActive && overlays.otsImagePath && (
                     <div className="absolute right-2.5 bottom-[42px] w-9 h-9 sm:w-11 sm:h-11 bg-[#111111] border border-gray-800 flex items-center justify-center p-1 rounded z-20 shadow-md">
-                      <img src={(overlays.otsImagePath.startsWith('http') || overlays.otsImagePath.startsWith('data:')) ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                     </div>
                   )}
 
@@ -780,7 +780,7 @@ function AdminPanel() {
                   </div>
                   <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#B3B3B3] rounded-lg border border-white/30 flex items-center justify-center p-2 shadow-inner overflow-hidden mx-auto sm:mx-0">
                     {overlays.otsImagePath ? (
-                      <img src={(overlays.otsImagePath.startsWith('http') || overlays.otsImagePath.startsWith('data:')) ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain rounded" />
+                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath}`} alt="OTS" className="max-w-full max-h-full object-contain rounded" />
                     ) : (
                       <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Preview</span>
                     )}
@@ -908,7 +908,7 @@ function AdminPanel() {
                 {/* OTS graphic overlay in public player */}
                 {overlays.otsActive && overlays.otsImagePath && (
                   <div className="absolute right-4 bottom-24 w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
-                    <img src={(overlays.otsImagePath.startsWith('http') || overlays.otsImagePath.startsWith('data:')) ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                    <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                   </div>
                 )}
 
