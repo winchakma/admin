@@ -509,7 +509,7 @@ function AdminPanel() {
           </button>
         </div>
 
-        {activeTab === 'admin' ? (
+        {activeTab === 'admin' && (
           /* ADMIN DASHBOARD */
           <div className="grid grid-cols-1 md:grid-cols-12 lg:grid-cols-12 gap-6 sm:gap-8 max-w-7xl w-full mx-auto">
             
@@ -969,7 +969,9 @@ function AdminPanel() {
             </div>
 
           </div>
-        ) : (
+        )}
+
+        {activeTab === 'public' && (
           /* VIEWER MODE */
           <div className="flex flex-col items-center justify-center p-2 sm:p-8 bg-slate-900 min-h-[60vh] sm:min-h-[80vh] rounded-2xl border border-slate-800 max-w-7xl w-full mx-auto">
             <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl relative">
