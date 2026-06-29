@@ -41,11 +41,9 @@ const startFfmpegStream = (inputVideoPath) => {
     fs.mkdirSync(path.join(__dirname, 'stream'), { recursive: true });
   }
 
-  const ticker1Path = path.join(__dirname, 'stream_data', 'ticker1.txt').replace(/\\/g, '/');
-  
-  // Note: For Windows paths in FFmpeg drawtext, colons must be escaped or we use relative paths.
-  // Using relative path for the text files to avoid absolute path escaping hell in drawtext
-  const relTicker1 = 'stream_data/ticker1.txt';
+  // FFmpeg drawtext requires escaped colons for Windows paths (e.g., C\:/path)
+  const escapedFontPath = path.join(__dirname, 'font.ttf').replace(/\\/g, '/').replace(':', '\\\\:');
+  const escapedTicker1 = path.join(__dirname, 'stream_data', 'ticker1.txt').replace(/\\/g, '/').replace(':', '\\\\:');
 
   activeFfmpegCommand = ffmpeg(inputVideoPath)
     .inputOptions([
@@ -54,7 +52,7 @@ const startFfmpegStream = (inputVideoPath) => {
     ])
     .complexFilter([
       // Basic example: Burn ticker1 text onto the video
-      `drawtext=textfile='${relTicker1}':reload=1:fontcolor=white:fontsize=32:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-50`
+      `drawtext=fontfile='${escapedFontPath}':textfile='${escapedTicker1}':reload=1:fontcolor=white:fontsize=32:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-50`
     ])
     .outputOptions([
       '-c:v libx264',
