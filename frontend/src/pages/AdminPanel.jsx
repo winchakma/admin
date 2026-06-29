@@ -673,10 +673,8 @@ function AdminPanel() {
                   <button 
                     onClick={() => {
                       setIsPushingLive(true);
-                      updateOverlayField({ 
-                        ticker1Active: !!overlays.ticker1Text,
-                        ticker2Active: !!overlays.ticker2Text,
-                      }, false);
+                      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                      saveConfigToBackend(overlays);
                       setTimeout(() => setIsPushingLive(false), 1000);
                     }}
                     className={`px-3 py-1.5 rounded font-extrabold text-[9px] sm:text-[10px] tracking-wide shadow-sm transition-all flex items-center gap-1 ${isPushingLive ? 'bg-[#50BF7B] text-white' : 'bg-[#C92C2C] hover:bg-[#AC2323] text-white'}`}
