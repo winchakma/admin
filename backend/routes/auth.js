@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const InvitedEmail = require('../models/InvitedEmail');
 const { protect } = require('../middleware/auth');
+const { authorize } = require('../middleware/role');
 
 // Helper function to sign JWT
 const signToken = (id) => {
@@ -115,6 +116,94 @@ router.get('/me', protect, async (req, res) => {
     res.status(200).json({
       success: true,
       user: req.user
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// @route   POST /api/auth/change-password
+// @desc    Change user password
+router.post('/change-password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Please provide both current and new password' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Incorrect current password' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// @route   POST /api/auth/invite
+// @desc    Invite a new admin email (Super Admin Only)
+router.post('/invite', protect, authorize('superadmin'), async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please provide an email to invite' });
+    }
+
+    const lowerEmail = email.toLowerCase().trim();
+
+    // Check if user already exists
+    const userExists = await User.findOne({ email: lowerEmail });
+    if (userExists) {
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
+    }
+
+    // Check if already invited
+    const inviteExists = await InvitedEmail.findOne({ email: lowerEmail });
+    if (inviteExists) {
+      return res.status(400).json({ success: false, message: 'Email is already invited' });
+    }
+
+    const newInvite = await InvitedEmail.create({
+      email: lowerEmail,
+      invitedBy: req.user.id
+    });
+
+    res.status(201).json({ success: true, data: newInvite });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+});
+
+// @route   GET /api/auth/invites
+// @desc    List all invited emails and current users (Super Admin Only)
+router.get('/invites', protect, authorize('superadmin'), async (req, res) => {
+  try {
+    const invites = await InvitedEmail.find().populate('invitedBy', 'email').sort('-createdAt');
+    const users = await User.find().select('-password').sort('-createdAt');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        invites,
+        users
+      }
     });
   } catch (err) {
     console.error(err);

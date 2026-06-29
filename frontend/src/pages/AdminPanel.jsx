@@ -20,7 +20,7 @@ import {
 const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
 
 function AdminPanel() {
-  const { token, logout } = useContext(AuthContext);
+  const { token, user, logout } = useContext(AuthContext);
   
   const apiFetch = async (url, options = {}) => {
     const res = await fetch(url, {
@@ -460,7 +460,10 @@ function AdminPanel() {
           </Link>
         </div>
         
-        <button className="w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-[#BDBDBD] transition-all">
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'settings' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-white hover:bg-[#BDBDBD]'}`}
+        >
           <Settings className="w-6 h-6" />
         </button>
       </div>
@@ -481,9 +484,12 @@ function AdminPanel() {
             <Folder className="w-5 h-5" />
             <span className="text-[9px] font-bold mt-0.5">Library</span>
         </Link>
-        <button className="flex flex-col items-center justify-center w-12 h-12 text-white">
+        <button 
+          onClick={() => setActiveTab('settings')} 
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'settings' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-white'}`}
+        >
           <Settings className="w-5 h-5" />
-          <span className="text-[9px] font-bold mt-0.5">Config</span>
+          <span className="text-[9px] font-bold mt-0.5">Settings</span>
         </button>
       </div>
 
@@ -1058,6 +1064,163 @@ function AdminPanel() {
                   Return to Dashboard
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- SETTINGS / SYSTEM OVERVIEW --- */}
+        {activeTab === 'settings' && (
+          <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full max-w-5xl mx-auto overflow-y-auto">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white mb-2 self-start tracking-wider">System Overview</h1>
+            <p className="text-gray-400 text-xs sm:text-sm self-start mb-8 tracking-wide">Manage your account and system permissions.</p>
+
+            <div className="w-full flex flex-col lg:flex-row gap-6 lg:gap-10">
+              
+              {/* Left Column: Password Management */}
+              <div className="flex-1 bg-[#1a1a1a] border border-gray-800 rounded-xl shadow-lg p-5 sm:p-6 flex flex-col gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+                    <Settings className="w-5 h-5 text-pink-500" />
+                  </div>
+                  <div>
+                    <h2 className="text-white font-bold text-sm sm:text-base">Change Password</h2>
+                    <p className="text-gray-500 text-[10px] sm:text-xs">Update your current admin password</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">Current Password</label>
+                    <input type="password" id="current-pwd" placeholder="Enter current password" className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-pink-500/50 transition-all" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">New Password</label>
+                    <input type="password" id="new-pwd" placeholder="Enter new password" className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-pink-500/50 transition-all" />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">Confirm New Password</label>
+                    <input type="password" id="confirm-pwd" placeholder="Re-enter new password" className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-pink-500/50 transition-all" />
+                  </div>
+                  <button 
+                    onClick={async () => {
+                      const cur = document.getElementById('current-pwd').value;
+                      const newP = document.getElementById('new-pwd').value;
+                      const conf = document.getElementById('confirm-pwd').value;
+                      if (!cur || !newP) return alert('Fill all fields');
+                      if (newP !== conf) return alert('New passwords do not match');
+                      
+                      try {
+                        const res = await apiFetch(`${SOCKET_URL}/api/auth/change-password`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ currentPassword: cur, newPassword: newP })
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          alert('Password updated successfully!');
+                          document.getElementById('current-pwd').value = '';
+                          document.getElementById('new-pwd').value = '';
+                          document.getElementById('confirm-pwd').value = '';
+                        } else {
+                          alert(data.message || 'Error updating password');
+                        }
+                      } catch (err) {
+                        alert('Error updating password');
+                      }
+                    }}
+                    className="mt-2 w-full py-3 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide transition-all shadow-md"
+                  >
+                    Update Password
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Super Admin Only (Promote Admins) */}
+              {user && user.role === 'superadmin' ? (
+                <div className="flex-1 bg-[#1a1a1a] border border-gray-800 rounded-xl shadow-lg p-5 sm:p-6 flex flex-col gap-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-gradient-to-r from-pink-500 to-purple-600 text-[10px] font-bold text-white rounded-bl-lg shadow-sm">
+                    SUPER ADMIN EXCLUSIVE
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                      <AlertTriangle className="w-5 h-5 text-purple-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-white font-bold text-sm sm:text-base">Admin Access Control</h2>
+                      <p className="text-gray-500 text-[10px] sm:text-xs">Invite news portals to become normal admins</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-gray-400 tracking-wider">Email Address to Invite</label>
+                      <div className="flex gap-2">
+                        <input type="email" id="invite-email" placeholder="client@news.com" className="flex-1 bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-purple-500/50 transition-all" />
+                        <button 
+                          onClick={async () => {
+                            const email = document.getElementById('invite-email').value;
+                            if (!email) return alert('Enter an email');
+                            try {
+                              const res = await apiFetch(`${SOCKET_URL}/api/auth/invite`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email })
+                              });
+                              const data = await res.json();
+                              if (data.success) {
+                                alert(`Invited ${email}! They can now register.`);
+                                document.getElementById('invite-email').value = '';
+                                // Re-render or force refetch of list not strictly needed if we just alert, but a refetch would be nice. 
+                                // Since it's a simple setup, alerting is sufficient for now.
+                              } else {
+                                alert(data.message || 'Error inviting user');
+                              }
+                            } catch (err) {
+                              alert('Error inviting user');
+                            }
+                          }}
+                          className="px-4 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition-all"
+                        >
+                          Invite
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">Invited users must go to the Register page to create their account.</p>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-800">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const res = await apiFetch(`${SOCKET_URL}/api/auth/invites`);
+                            const data = await res.json();
+                            if (data.success) {
+                              const invitesList = data.data.invites.map(i => i.email).join('\n');
+                              const usersList = data.data.users.map(u => `${u.email} (${u.role})`).join('\n');
+                              alert(`PENDING INVITES:\n${invitesList || 'None'}\n\nREGISTERED ADMINS:\n${usersList}`);
+                            }
+                          } catch (err) {
+                            alert('Failed to load list');
+                          }
+                        }}
+                        className="w-full py-2.5 rounded-lg border border-purple-500/30 text-purple-400 font-bold text-xs hover:bg-purple-500/10 transition-all"
+                      >
+                        View All Admins & Pending Invites
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 bg-[#1a1a1a] border border-gray-800 rounded-xl shadow-lg p-5 sm:p-6 flex flex-col gap-4 items-center justify-center text-center opacity-50">
+                   <AlertTriangle className="w-8 h-8 text-gray-600" />
+                   <div>
+                     <h3 className="text-gray-400 font-bold text-sm">Restricted Area</h3>
+                     <p className="text-gray-600 text-xs mt-1">Only the Super Admin can manage permissions.</p>
+                   </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}
