@@ -60,6 +60,11 @@ function AdminPanel() {
     isPlaying: false
   });
 
+  const overlaysRef = useRef(overlays);
+  useEffect(() => {
+    overlaysRef.current = overlays;
+  }, [overlays]);
+
   const [uploadTitle, setUploadTitle] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -276,23 +281,20 @@ function AdminPanel() {
     }
   };
 
-  // Immediate state update & DEBOUNCED background save
   const updateOverlayField = (updates, debounce = false) => {
-    setOverlays(prev => {
-      const nextState = { ...prev, ...updates };
+    setOverlays(prev => ({ ...prev, ...updates }));
 
-      // Handle background API save with the FULL next state
-      if (debounce) {
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => {
-          saveConfigToBackend(nextState);
-        }, 1000); // 1 second debounce
-      } else {
-        saveConfigToBackend(nextState);
-      }
+    const stateToSave = { ...overlaysRef.current, ...updates };
 
-      return nextState;
-    });
+    if (debounce) {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        // Read the absolute latest state when the timeout fires
+        saveConfigToBackend(overlaysRef.current);
+      }, 1000); // 1 second debounce
+    } else {
+      saveConfigToBackend(stateToSave);
+    }
   };
 
   const saveConfigToBackend = (updates) => {
@@ -672,7 +674,7 @@ function AdminPanel() {
                     onClick={() => {
                       setIsPushingLive(true);
                       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                      saveConfigToBackend(overlays);
+                      saveConfigToBackend(overlaysRef.current);
                       setTimeout(() => setIsPushingLive(false), 1000);
                     }}
                     className={`px-3 py-1.5 rounded font-extrabold text-[9px] sm:text-[10px] tracking-wide shadow-sm transition-all flex items-center gap-1 ${isPushingLive ? 'bg-[#50BF7B] text-white' : 'bg-[#C92C2C] hover:bg-[#AC2323] text-white'}`}
