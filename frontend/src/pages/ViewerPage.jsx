@@ -39,6 +39,16 @@ const ViewerPage = () => {
 
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [currentDateStr, setCurrentDateStr] = useState('');
+  const [currentDayStr, setCurrentDayStr] = useState('');
+  const [rotationIndex, setRotationIndex] = useState(0);
+
+  // Rotating index for Time/Date/Day
+  useEffect(() => {
+    const rotater = setInterval(() => {
+      setRotationIndex(prev => (prev + 1) % 3);
+    }, 3000);
+    return () => clearInterval(rotater);
+  }, []);
 
   // Live time and date updater
   useEffect(() => {
@@ -53,6 +63,9 @@ const ViewerPage = () => {
       const month = (d.getMonth() + 1).toString().padStart(2, '0');
       const year = d.getFullYear();
       setCurrentDateStr(`${day}/${month}/${year}`);
+
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      setCurrentDayStr(days[d.getDay()]);
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -227,7 +240,7 @@ const ViewerPage = () => {
             {/* Tickers & Time/Date Aligned Bottom Rows */}
             <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 z-20 text-[2.5vw] md:text-[1.8vw] lg:text-[1.2vw] xl:text-[1vw] font-bold text-white select-none drop-shadow-lg">
               {/* Row 1 (Ticker 1 & Time) */}
-              {(overlays.ticker1Active || overlays.showTime) && (
+              {overlays.ticker1Active && (
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                   {/* Ticker 1 Title */}
                   {overlays.ticker1Active && (
@@ -241,17 +254,12 @@ const ViewerPage = () => {
                       <marquee className="font-normal flex-1 text-gray-100" scrollamount="4">{overlays.ticker1Text}</marquee>
                     </div>
                   )}
-                  {/* Time */}
-                  {overlays.showTime && (
-                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300 ${!overlays.ticker1Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
-                      {currentTimeStr}
-                    </div>
-                  )}
+                  {/* (Time bug moved to unified rotating bug below) */}
                 </div>
               )}
 
-              {/* Row 2 (Ticker 2 & Date) */}
-              {(overlays.ticker2Active || overlays.showDate) && (
+              {/* Row 2 (Ticker 2 & Unified Rotating Bug) */}
+              {(overlays.ticker2Active || overlays.showDate || overlays.showTime) && (
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                   {/* Ticker 2 Title */}
                   {overlays.ticker2Active && (
@@ -265,10 +273,12 @@ const ViewerPage = () => {
                       <marquee className="font-normal flex-1 text-gray-100" scrollamount="5">{overlays.ticker2Text}</marquee>
                     </div>
                   )}
-                  {/* Date */}
-                  {overlays.showDate && (
-                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300 ${!overlays.ticker2Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
-                      {currentDateStr}
+                  {/* Unified Rotating Time/Date Bug */}
+                  {(overlays.showDate || overlays.showTime) && (
+                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 ${!overlays.ticker2Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
+                      {rotationIndex === 0 && <span className="animate-pulse">{currentTimeStr}</span>}
+                      {rotationIndex === 1 && <span>{currentDayStr}</span>}
+                      {rotationIndex === 2 && <span>{currentDateStr}</span>}
                     </div>
                   )}
                 </div>

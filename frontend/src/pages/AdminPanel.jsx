@@ -72,6 +72,17 @@ function AdminPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [currentDateStr, setCurrentDateStr] = useState('');
+  const [currentDayStr, setCurrentDayStr] = useState('');
+  const [rotationIndex, setRotationIndex] = useState(0);
+
+  // Rotating index for Time/Date/Day
+  useEffect(() => {
+    const rotater = setInterval(() => {
+      setRotationIndex(prev => (prev + 1) % 3);
+    }, 3000);
+    return () => clearInterval(rotater);
+  }, []);
+
   const socketRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
@@ -97,6 +108,9 @@ function AdminPanel() {
       const month = (d.getMonth() + 1).toString().padStart(2, '0');
       const year = d.getFullYear();
       setCurrentDateStr(`${day}/${month}/${year}`);
+
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      setCurrentDayStr(days[d.getDay()]);
     }, 1000);
     return () => clearInterval(timer);
   }, []);
@@ -563,7 +577,7 @@ function AdminPanel() {
                   {/* Tickers & Time/Date Aligned Bottom Rows */}
                   <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-0.5 z-20 text-[8px] sm:text-[10px] font-bold text-white select-none drop-shadow">
                     {/* Row 1 (Ticker 1 & Time) */}
-                    {(overlays.ticker1Active || overlays.showTime) && (
+                    {overlays.ticker1Active && (
                       <div className={`flex w-full shadow-lg ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                         {/* Ticker 1 Title */}
                         {overlays.ticker1Active && (
@@ -577,17 +591,12 @@ function AdminPanel() {
                             <marquee className="font-normal flex-1 text-gray-100" scrollamount="2">{overlays.ticker1Text}</marquee>
                           </div>
                         )}
-                        {/* Time */}
-                        {overlays.showTime && (
-                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-2 py-1 min-w-[12%] text-center font-mono flex items-center justify-center text-gray-300 ${!overlays.ticker1Active ? 'rounded' : 'rounded-r'}`}>
-                            {currentTimeStr || 'Time'}
-                          </div>
-                        )}
+                        {/* (Time bug moved to unified rotating bug below) */}
                       </div>
                     )}
 
-                    {/* Row 2 (Ticker 2 & Date) */}
-                    {(overlays.ticker2Active || overlays.showDate) && (
+                    {/* Row 2 (Ticker 2 & Unified Rotating Bug) */}
+                    {(overlays.ticker2Active || overlays.showDate || overlays.showTime) && (
                       <div className={`flex w-full shadow-lg ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                         {/* Ticker 2 Title */}
                         {overlays.ticker2Active && (
@@ -601,10 +610,12 @@ function AdminPanel() {
                             <marquee className="font-normal flex-1 text-gray-100" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                           </div>
                         )}
-                        {/* Date */}
-                        {overlays.showDate && (
-                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-2 py-1 min-w-[12%] text-center font-mono flex items-center justify-center text-gray-300 ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
-                            {currentDateStr || 'Date'}
+                        {/* Unified Rotating Time/Date Bug */}
+                        {(overlays.showDate || overlays.showTime) && (
+                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-2 py-1 min-w-[12%] text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
+                            {rotationIndex === 0 && <span className="animate-pulse">{currentTimeStr || 'Time'}</span>}
+                            {rotationIndex === 1 && <span>{currentDayStr || 'Day'}</span>}
+                            {rotationIndex === 2 && <span>{currentDateStr || 'Date'}</span>}
                           </div>
                         )}
                       </div>
