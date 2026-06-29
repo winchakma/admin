@@ -105,6 +105,11 @@ const startScheduler = (io) => {
         const currentDhakaTimeStr = `${hh}:${mm}`;
 
         for (const [prayer, time] of Object.entries(todayPrayerTimes)) {
+          // Skip Zohr on Fridays for now, waiting for client confirmation
+          if (prayer === 'Zohr' && dhakaDate.getDay() === 5) {
+            continue;
+          }
+
           if (currentDhakaTimeStr === time && !azanPlayedToday[prayer]) {
             azanPlayedToday[prayer] = true;
             console.log(`[Azan System] It is exactly time for ${prayer} Azan (${time}). Triggering video...`);
