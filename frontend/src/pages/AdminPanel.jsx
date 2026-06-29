@@ -172,9 +172,7 @@ function AdminPanel() {
     
     s.on('stream_status', (data) => {
       setStatus(data);
-      if (data.overlays) {
-        setOverlays(prev => ({ ...prev, ...data.overlays }));
-      }
+      // Removed destructive overwrite of local editing overlays state
     });
 
     s.on('playlist_updated', (updatedPlaylist) => {
@@ -280,21 +278,21 @@ function AdminPanel() {
 
   // Immediate state update & DEBOUNCED background save
   const updateOverlayField = (updates, debounce = false) => {
-    // 1. Update React state immediately (always synchronous and instant)
-    setOverlays(prev => ({
-      ...prev,
-      ...updates
-    }));
+    setOverlays(prev => {
+      const nextState = { ...prev, ...updates };
 
-    // 2. Handle background API save
-    if (debounce) {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        saveConfigToBackend(updates);
-      }, 1000); // 1 second debounce
-    } else {
-      saveConfigToBackend(updates);
-    }
+      // Handle background API save with the FULL next state
+      if (debounce) {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+          saveConfigToBackend(nextState);
+        }, 1000); // 1 second debounce
+      } else {
+        saveConfigToBackend(nextState);
+      }
+
+      return nextState;
+    });
   };
 
   const saveConfigToBackend = (updates) => {
