@@ -227,19 +227,23 @@ const ViewerPage = () => {
             {/* Tickers & Time/Date Aligned Bottom Rows */}
             <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 z-20 text-[2.5vw] md:text-[1.8vw] lg:text-[1.2vw] xl:text-[1vw] font-bold text-white select-none drop-shadow-lg">
               {/* Row 1 (Ticker 1 & Time) */}
-              {overlays.ticker1Active && (
-                <div className="flex w-full shadow-2xl">
+              {(overlays.ticker1Active || overlays.showTime) && (
+                <div className={`flex w-full shadow-2xl ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                   {/* Ticker 1 Title */}
-                  <div className="bg-[#111111] border-r-2 border-pink-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg min-w-[15%] md:min-w-[12%] text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap">
-                    {overlays.ticker1Title || 'Headline News 1'}
-                  </div>
+                  {overlays.ticker1Active && (
+                    <div className="bg-[#111111] border-r-2 border-pink-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg min-w-[15%] md:min-w-[12%] text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap">
+                      {overlays.ticker1Title || 'Headline News 1'}
+                    </div>
+                  )}
                   {/* Ticker 1 Text */}
-                  <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-4 py-2 md:py-3 flex items-center overflow-hidden">
-                    <marquee className="font-normal flex-1 text-gray-100" scrollamount="4">{overlays.ticker1Text}</marquee>
-                  </div>
+                  {overlays.ticker1Active && (
+                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-4 py-2 md:py-3 flex items-center overflow-hidden">
+                      <marquee className="font-normal flex-1 text-gray-100" scrollamount="4">{overlays.ticker1Text}</marquee>
+                    </div>
+                  )}
                   {/* Time */}
                   {overlays.showTime && (
-                    <div className="bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 rounded-r-lg min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300">
+                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300 ${!overlays.ticker1Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
                       {currentTimeStr}
                     </div>
                   )}
@@ -247,19 +251,23 @@ const ViewerPage = () => {
               )}
 
               {/* Row 2 (Ticker 2 & Date) */}
-              {overlays.ticker2Active && (
-                <div className="flex w-full shadow-2xl">
+              {(overlays.ticker2Active || overlays.showDate) && (
+                <div className={`flex w-full shadow-2xl ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                   {/* Ticker 2 Title */}
-                  <div className="bg-[#111111] border-r-2 border-blue-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg min-w-[15%] md:min-w-[12%] text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap">
-                    {overlays.ticker2Title || 'Headline News 2'}
-                  </div>
+                  {overlays.ticker2Active && (
+                    <div className="bg-[#111111] border-r-2 border-blue-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg min-w-[15%] md:min-w-[12%] text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap">
+                      {overlays.ticker2Title || 'Headline News 2'}
+                    </div>
+                  )}
                   {/* Ticker 2 Text */}
-                  <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-4 py-2 md:py-3 flex items-center overflow-hidden">
-                    <marquee className="font-normal flex-1 text-gray-100" scrollamount="5">{overlays.ticker2Text}</marquee>
-                  </div>
+                  {overlays.ticker2Active && (
+                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-4 py-2 md:py-3 flex items-center overflow-hidden">
+                      <marquee className="font-normal flex-1 text-gray-100" scrollamount="5">{overlays.ticker2Text}</marquee>
+                    </div>
+                  )}
                   {/* Date */}
                   {overlays.showDate && (
-                    <div className="bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 rounded-r-lg min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300">
+                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300 ${!overlays.ticker2Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
                       {currentDateStr}
                     </div>
                   )}
