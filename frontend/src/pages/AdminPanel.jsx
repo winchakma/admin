@@ -387,6 +387,9 @@ function AdminPanel() {
       });
     } catch (err) {
       console.warn('OTS Image upload failed');
+    } finally {
+      // Reset input value to allow selecting same file again
+      e.target.value = '';
     }
   };
 
