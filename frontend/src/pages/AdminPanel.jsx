@@ -425,17 +425,13 @@ function AdminPanel() {
       {/* DESKTOP SIDEBAR NAVIGATION */}
       <div className="hidden sm:flex w-16 bg-[#111111] border-r border-gray-800 flex-col items-center py-6 justify-between shrink-0">
         <div className="flex flex-col gap-6 items-center w-full">
-          <label className="text-[10px] font-black text-white tracking-wider mb-2 text-center uppercase cursor-pointer hover:text-pink-500 transition-colors flex flex-col items-center group relative">
+          <div className="flex flex-col items-center mb-2">
             {overlays.logoImagePath ? (
               <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} className="w-10 h-10 object-contain rounded mb-1" alt="Site Logo" />
             ) : (
-              <>Site<br/>Logo</>
+              <div className="text-[10px] font-black text-white tracking-wider text-center uppercase">Site<br/>Logo</div>
             )}
-            <div className="absolute inset-0 bg-black/50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <Upload className="w-4 h-4 text-white" />
-            </div>
-            <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-          </label>
+          </div>
           
           <button 
             onClick={() => setActiveTab('admin')} 
@@ -794,6 +790,39 @@ function AdminPanel() {
                   </div>
                 </div>
 
+              </div>
+
+              {/* Stream Logo config */}
+              <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-4">
+                <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Stream Logo</span>
+                <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 flex flex-col gap-2.5">
+                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
+                      <Upload className="w-3.5 h-3.5 stroke-[3]" />
+                      Upload Logo
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                    </label>
+                    <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
+                      <ArrowUp className="w-3.5 h-3.5 -rotate-45 stroke-[3]" />
+                      Top Left
+                    </button>
+                  </div>
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[#B3B3B3] rounded-lg border border-white/30 flex items-center justify-center p-2 shadow-inner overflow-hidden mx-auto sm:mx-0">
+                    {overlays.logoImagePath ? (
+                      <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath}`} alt="Logo" className="max-w-full max-h-full object-contain rounded" />
+                    ) : (
+                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Preview</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Enable Logo toggle */}
+                <button 
+                  onClick={() => updateOverlayField({ logoActive: !overlays.logoActive })}
+                  className={`w-12 h-6 rounded-full p-1 self-end transition-all ${overlays.logoActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                >
+                  <div className={`w-4 h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.logoActive ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                </button>
               </div>
 
               {/* OTS Graphic config */}
