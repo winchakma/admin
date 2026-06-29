@@ -8,6 +8,7 @@ const Playlist = require('../models/Playlist');
 const AdItem = require('../models/AdItem');
 const AdState = require('../models/AdState');
 const Channel = require('../models/Channel');
+const Overlay = require('../models/Overlay');
 const { protect } = require('../middleware/auth');
 
 // Configure Multer for file uploads
