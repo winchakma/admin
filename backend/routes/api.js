@@ -177,6 +177,7 @@ router.post('/playlist', protect, async (req, res) => {
       title: title || 'External Live Stream',
       filePath: videoUrl, // Save URL in the path field
       duration: duration || 3600, // Default to 1 hour
+      category: req.body.category || 'News',
       orderIndex,
       status: 'active'
     });
@@ -214,6 +215,7 @@ router.post('/playlist/upload', protect, upload.single('video'), async (req, res
       title: req.body.title || req.file.originalname,
       filePath,
       duration,
+      category: req.body.category || 'News',
       orderIndex,
       status: 'active'
     });

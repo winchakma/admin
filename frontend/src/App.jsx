@@ -5,6 +5,7 @@ import ViewerPage from './pages/ViewerPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminPanel from './pages/AdminPanel';
+import VideoLibrary from './pages/VideoLibrary';
 import './App.css';
 import './index.css';
 
@@ -37,6 +38,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AdminPanel />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/library" 
+            element={
+              <ProtectedRoute>
+                <VideoLibrary />
               </ProtectedRoute>
             } 
           />

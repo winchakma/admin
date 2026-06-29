@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import io from 'socket.io-client';
 import Hls from 'hls.js';
@@ -53,19 +54,20 @@ function AdminPanel() {
     isBroadcastActive: true
   });
 
-  const [status, setStatus] = useState({
-    activeVideo: null,
-    elapsedTime: 0,
-    remainingTime: 0,
-    isPlaying: false
+  const [status, setStatus] = useState({ 
+    activeVideo: null, 
+    position: 0, 
+    isPaused: false,
+    adState: { isActive: false, isPlaying: false, activeAd: null, position: 0 } 
   });
-
+  
   const overlaysRef = useRef(overlays);
   useEffect(() => {
     overlaysRef.current = overlays;
   }, [overlays]);
 
   const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('News');
   const [externalUrl, setExternalUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
@@ -314,6 +316,7 @@ function AdminPanel() {
     const formData = new FormData();
     formData.append('video', file);
     formData.append('title', uploadTitle || file.name);
+    formData.append('category', uploadCategory);
 
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/playlist/upload`, {
@@ -345,6 +348,7 @@ function AdminPanel() {
           title: uploadTitle || 'External Live Stream',
           videoUrl: externalUrl,
           duration: 3600, // Default duration for live streams (1 hour)
+          category: uploadCategory,
           orderIndex: playlist.length,
           status: 'active'
         })
@@ -433,12 +437,12 @@ function AdminPanel() {
             <Home className="w-6 h-6" />
           </button>
           
-          <button 
-            onClick={() => setActiveTab('public')} 
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-white hover:bg-[#BDBDBD]'}`}
+          <Link 
+            to="/library"
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all text-white hover:bg-[#BDBDBD]`}
           >
             <Folder className="w-6 h-6" />
-          </button>
+          </Link>
         </div>
         
         <button className="w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-[#BDBDBD] transition-all">
@@ -455,13 +459,13 @@ function AdminPanel() {
           <Home className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Admin</span>
         </button>
-        <button 
-          onClick={() => setActiveTab('public')} 
-          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'public' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-white'}`}
-        >
-          <Folder className="w-5 h-5" />
-          <span className="text-[9px] font-bold mt-0.5">Viewer</span>
-        </button>
+        <Link 
+            to="/library"
+            className="flex flex-col items-center justify-center w-12 h-12 rounded-xl text-white"
+          >
+            <Folder className="w-5 h-5" />
+            <span className="text-[9px] font-bold mt-0.5">Library</span>
+        </Link>
         <button className="flex flex-col items-center justify-center w-12 h-12 text-white">
           <Settings className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Config</span>
@@ -910,13 +914,24 @@ function AdminPanel() {
 
                 {/* Add Video button mockup */}
                 <div className="flex flex-col gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="Enter video title (optional)" 
-                    value={uploadTitle} 
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    className="bg-[#2a2a2a] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none w-full"
-                  />
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="Title (optional)" 
+                      value={uploadTitle} 
+                      onChange={(e) => setUploadTitle(e.target.value)}
+                      className="bg-[#2a2a2a] border-none rounded-lg px-3 py-1.5 text-xs text-gray-300 outline-none flex-1"
+                    />
+                    <select 
+                      value={uploadCategory} 
+                      onChange={(e) => setUploadCategory(e.target.value)}
+                      className="bg-[#2a2a2a] border-none rounded-lg px-2 py-1.5 text-xs text-gray-300 outline-none"
+                    >
+                      <option value="News">News</option>
+                      <option value="Music">Music</option>
+                      <option value="Movie">Movie</option>
+                    </select>
+                  </div>
                   <label className="py-3 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] text-white font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-gray-700 transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     Add Video

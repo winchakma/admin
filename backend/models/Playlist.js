@@ -14,6 +14,11 @@ const PlaylistSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  category: {
+    type: String,
+    enum: ['News', 'Music', 'Movie'],
+    default: 'News'
+  },
   orderIndex: {
     type: Number,
     required: true,
