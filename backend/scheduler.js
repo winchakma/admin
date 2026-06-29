@@ -246,7 +246,7 @@ const manageLocalPlayout = (selectedItem, offset) => {
   let inputVideoPath = selectedItem.filePath;
   
   if (!isExternalUrl) {
-    inputVideoPath = path.join(__dirname, '..', selectedItem.filePath);
+    inputVideoPath = path.join(__dirname, selectedItem.filePath);
     if (!fs.existsSync(inputVideoPath)) {
       console.log(`[FFmpeg CG] Cannot start stream. Local video file missing: ${inputVideoPath}`);
       return;
