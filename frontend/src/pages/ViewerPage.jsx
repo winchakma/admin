@@ -247,22 +247,22 @@ const ViewerPage = () => {
         }}
         className={`absolute inset-0 w-full h-full bg-black group ${!isHovering ? 'cursor-none' : ''}`}
       >
-        {status.activeVideo && overlays.isBroadcastActive ? (
-          <>
-            <video 
-              ref={video1Ref} 
-              className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
-              playsInline 
-              muted={isMuted}
-            />
-            <video 
-              ref={video2Ref} 
-              className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
-              playsInline 
-              muted={isMuted}
-            />
-          </>
-        ) : (
+        <div className={`absolute inset-0 w-full h-full ${status.activeVideo && overlays.isBroadcastActive ? 'block' : 'hidden'}`}>
+          <video 
+            ref={video1Ref} 
+            className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+            playsInline 
+            muted={isMuted}
+          />
+          <video 
+            ref={video2Ref} 
+            className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+            playsInline 
+            muted={isMuted}
+          />
+        </div>
+
+        {(!status.activeVideo || !overlays.isBroadcastActive) && (
           <div className="absolute inset-0 bg-[#66DE93] z-0 flex items-center justify-center">
             <span className="text-black font-bold text-xl uppercase tracking-widest opacity-30">
               Broadcast Offline
@@ -475,6 +475,16 @@ const ViewerPage = () => {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Subtle Admin Login Button (Appears on Hover) */}
+            <div className={`absolute top-4 right-4 z-50 transition-opacity duration-300 ${isHovering ? 'opacity-100' : 'opacity-0'}`}>
+              <Link to="/login" className="bg-black/50 hover:bg-pink-600 text-white p-2 rounded-full backdrop-blur transition-colors shadow-lg flex items-center justify-center group/admin">
+                <Settings className="w-5 h-5" />
+                <span className="w-0 overflow-hidden group-hover/admin:w-24 group-hover/admin:ml-2 transition-all duration-300 whitespace-nowrap text-xs font-bold uppercase tracking-wider">
+                  Admin Login
+                </span>
+              </Link>
             </div>
           </>
         )}
