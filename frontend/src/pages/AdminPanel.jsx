@@ -120,6 +120,8 @@ function AdminPanel() {
   }, []);
 
   // Dual Video Engine logic inside a reusable function
+  const currentVideoIdRef = useRef(null);
+  
   const setupDualPlayer = (video1Ref, video2Ref, activePlayer, setActivePlayer) => {
     if (!status.activeVideo) {
       if (video1Ref.current) video1Ref.current.src = '';
@@ -136,7 +138,9 @@ function AdminPanel() {
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
 
-    if (currentEl.src && !currentEl.src.endsWith(videoUrl.split('?')[0]) && currentEl.src !== videoUrl) {
+    if (currentVideoIdRef.current !== status.activeVideo.id) {
+      currentVideoIdRef.current = status.activeVideo.id;
+      
       if (nextEl.src && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
         nextEl.currentTime = status.activeVideo.offset || 0;
         nextEl.play().catch(e => console.log(e));
@@ -162,6 +166,7 @@ function AdminPanel() {
       currentEl.src = videoUrl;
       currentEl.currentTime = status.activeVideo.offset || 0;
       currentEl.play().catch(e => console.log(e));
+      currentVideoIdRef.current = status.activeVideo.id;
     } else {
       const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
       if (currentDiff > 2) {

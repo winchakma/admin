@@ -19,6 +19,7 @@ const ViewerPage = () => {
   const [activePlayer, setActivePlayer] = useState(1);
   const wrapperRef = useRef(null);
   const socketRef = useRef(null);
+  const currentVideoIdRef = useRef(null);
 
   const [overlays, setOverlays] = useState({
     ticker1Text: '',
@@ -137,8 +138,10 @@ const ViewerPage = () => {
       : `${SOCKET_URL}/${normalizedPath}`;
 
     // 1. Transition Check (Video Switched)
-    // We check if the URL we are SUPPOSED to play doesn't match the CURRENT player
-    if (currentEl.src && !currentEl.src.endsWith(videoUrl.split('?')[0]) && currentEl.src !== videoUrl) {
+    // Use the unique video ID to check for transitions, avoiding URL mismatch blinking bugs
+    if (currentVideoIdRef.current !== status.activeVideo.id) {
+      currentVideoIdRef.current = status.activeVideo.id;
+      
       // Is the next video preloaded in the background player?
       if (nextEl.src && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
         // PERFECT! It's preloaded. Swap instantly!
@@ -172,6 +175,7 @@ const ViewerPage = () => {
       currentEl.src = videoUrl;
       currentEl.currentTime = status.activeVideo.offset || 0;
       currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+      currentVideoIdRef.current = status.activeVideo.id;
     } else {
       // 2. Sync Enforcement (Runs every second because status.activeVideo is a new object reference)
       const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
@@ -351,12 +355,13 @@ const ViewerPage = () => {
                 {/* Left Controls */}
                 <div className="flex items-center space-x-4">
                   <button onClick={() => {
-                    if (videoRef.current) {
+                    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                    if (currentEl) {
                       if (isPaused) {
-                        videoRef.current.play();
+                        currentEl.play();
                         setIsPaused(false);
                       } else {
-                        videoRef.current.pause();
+                        currentEl.pause();
                         setIsPaused(true);
                       }
                     }
@@ -366,14 +371,15 @@ const ViewerPage = () => {
                   
                   <div className="flex items-center space-x-2 group/volume relative">
                     <button onClick={() => {
-                      if (videoRef.current) {
+                      const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                      if (currentEl) {
                         if (isMuted) {
-                          videoRef.current.muted = false;
-                          videoRef.current.volume = volume === 0 ? 0.5 : volume;
+                          currentEl.muted = false;
+                          currentEl.volume = volume === 0 ? 0.5 : volume;
                           setIsMuted(false);
                           if (volume === 0) setVolume(0.5);
                         } else {
-                          videoRef.current.muted = true;
+                          currentEl.muted = true;
                           setIsMuted(true);
                         }
                       }
@@ -387,9 +393,10 @@ const ViewerPage = () => {
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setVolume(val);
-                        if (videoRef.current) {
-                          videoRef.current.volume = val;
-                          videoRef.current.muted = val === 0;
+                        const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                        if (currentEl) {
+                          currentEl.volume = val;
+                          currentEl.muted = val === 0;
                         }
                         setIsMuted(val === 0);
                       }}
@@ -399,9 +406,10 @@ const ViewerPage = () => {
 
                   <button 
                     onClick={() => {
-                      if (videoRef.current && status.activeVideo) {
-                        videoRef.current.currentTime = status.activeVideo.offset;
-                        videoRef.current.play().catch(e => console.log(e));
+                      const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                      if (currentEl && status.activeVideo) {
+                        currentEl.currentTime = status.activeVideo.offset;
+                        currentEl.play().catch(e => console.log(e));
                         setIsPaused(false);
                       }
                     }}
