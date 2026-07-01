@@ -25,43 +25,71 @@ const formatTime = (seconds) => {
 };
 
 export default function VideoLibrary() {
-  const [playlist, setPlaylist] = useState([]);
+  const [libraryAssets, setLibraryAssets] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [status, setStatus] = useState({ activeVideo: null, position: 0, isPaused: false });
+  const [isUploading, setIsUploading] = useState(false);
   const socketRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const s = io(SOCKET_URL, { reconnectionAttempts: 5, timeout: 5000 });
     socketRef.current = s;
 
-    s.on('playlist_updated', (updatedPlaylist) => {
-      setPlaylist(updatedPlaylist);
+    s.on('playlist_updated', () => {
+      // Library is separate now, no need to update on playlist changes
     });
 
     s.on('stream_status', (data) => {
-      setStatus(data);
+      // Status not strictly needed for library anymore unless we want to show it
     });
 
-    fetchPlaylist();
+    fetchLibrary();
 
     return () => s.disconnect();
   }, []);
 
-  const fetchPlaylist = async () => {
+  const fetchLibrary = async () => {
     try {
-      const res = await apiFetch(`${SOCKET_URL}/api/playlist`);
+      const res = await apiFetch(`${SOCKET_URL}/api/library`);
       const data = await res.json();
-      setPlaylist(data);
+      setLibraryAssets(data);
     } catch (e) {
       console.warn('API Offline, using local data');
     }
   };
 
-  const handleRemoveVideo = async (id) => {
-    setPlaylist(playlist.filter(item => item._id !== id));
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('title', file.name);
+
     try {
-      await apiFetch(`${SOCKET_URL}/api/playlist/${id}`, { method: 'DELETE' });
+      await apiFetch(`${SOCKET_URL}/api/library/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      await fetchLibrary(); // Refresh library after upload
+    } catch (err) {
+      console.error('Upload failed', err);
+      alert('Failed to upload video');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveVideo = async (id) => {
+    if (!window.confirm('Are you sure you want to permanently delete this video from the library?')) return;
+    try {
+      await apiFetch(`${SOCKET_URL}/api/library/${id}`, { method: 'DELETE' });
+      fetchLibrary();
     } catch (err) {
       console.warn('Delete failed');
     }
@@ -69,18 +97,18 @@ export default function VideoLibrary() {
 
   const handleCategoryChange = async (id, newCategory) => {
     try {
-      await apiFetch(`${SOCKET_URL}/api/playlist/${id}`, {
+      await apiFetch(`${SOCKET_URL}/api/library/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category: newCategory })
       });
-      fetchPlaylist();
+      fetchLibrary();
     } catch (err) {
       console.warn('Category update failed');
     }
   };
 
-  const filteredVideos = playlist.filter(video => {
+  const filteredVideos = libraryAssets.filter(video => {
     if (activeTab !== 'All' && video.category !== activeTab) return false;
     if (searchQuery && !video.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
@@ -137,13 +165,27 @@ export default function VideoLibrary() {
             </h2>
             <p className="text-sm text-gray-500 mt-1 font-bold">Manage and organize your broadcast assets</p>
           </div>
-          <Link 
-            to="/admin" 
-            className="px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2"
-          >
-            <Play className="w-4 h-4 fill-current" />
-            Go to Control Center
-          </Link>
+          <div className="flex gap-4">
+            <label className={`px-5 py-2.5 rounded-lg text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2 cursor-pointer ${isUploading ? 'bg-gray-600' : 'bg-green-600 hover:bg-green-700'}`}>
+              <Upload className="w-4 h-4" />
+              {isUploading ? 'Uploading...' : 'Upload Video'}
+              <input 
+                type="file" 
+                accept="video/*" 
+                onChange={handleFileUpload} 
+                disabled={isUploading}
+                ref={fileInputRef}
+                className="hidden" 
+              />
+            </label>
+            <Link 
+              to="/admin" 
+              className="px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              Go to Control Center
+            </Link>
+          </div>
         </div>
 
         <div className="max-w-7xl w-full mx-auto flex flex-col gap-6">
@@ -191,14 +233,6 @@ export default function VideoLibrary() {
                 <div className="aspect-video bg-[#111111] relative flex items-center justify-center">
                   <Film className="w-12 h-12 text-gray-800" />
                   
-                  {/* Status Badge */}
-                  {status.activeVideo?.id === video._id && (
-                    <div className="absolute top-2 left-2 bg-[#C92C2C] text-white text-[9px] font-bold px-2 py-0.5 rounded tracking-widest flex items-center gap-1 shadow-lg">
-                      <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-                      LIVE NOW
-                    </div>
-                  )}
-
                   {/* Duration Badge */}
                   <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
                     <Clock className="w-3 h-3" />

@@ -33,6 +33,8 @@ function AdminPanel() {
 
   const [activeTab, setActiveTab] = useState('admin');
   const [playlist, setPlaylist] = useState([]);
+  const [libraryAssets, setLibraryAssets] = useState([]);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
   const previewVideo1Ref = useRef(null);
@@ -252,10 +254,12 @@ function AdminPanel() {
       setAds(updatedAds);
     });
 
-    fetchPlaylist();
     fetchOverlays();
+    fetchPlaylist();
+    fetchLibrary();
     fetchAds();
-
+    fetchChannels();
+    
     return () => s.disconnect();
   }, []);
 
@@ -266,6 +270,16 @@ function AdminPanel() {
       setPlaylist(data);
     } catch (e) {
       console.warn('API Offline, using local data');
+    }
+  };
+
+  const fetchLibrary = async () => {
+    try {
+      const res = await apiFetch(`${SOCKET_URL}/api/library`);
+      const data = await res.json();
+      setLibraryAssets(data);
+    } catch (e) {
+      console.warn('Failed to fetch library');
     }
   };
 
@@ -1039,11 +1053,13 @@ function AdminPanel() {
                       <option value="Movie">Movie</option>
                     </select>
                   </div>
-                  <label className="py-3 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] text-white font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-gray-700 transition-all shadow-sm cursor-pointer w-full">
-                    <Upload className="w-4 h-4 stroke-[3]" />
-                    Add Video
-                    <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
-                  </label>
+                  <button 
+                    onClick={() => setShowLibraryModal(true)}
+                    className="py-3 rounded-lg bg-[#2a2a2a] hover:bg-[#333333] text-white font-bold text-xs tracking-widest flex items-center justify-center gap-2 border border-gray-700 transition-all shadow-sm cursor-pointer w-full"
+                  >
+                    <Folder className="w-4 h-4 stroke-[3]" />
+                    Select from Library
+                  </button>
                 </div>
               </div>
 
@@ -1324,6 +1340,71 @@ function AdminPanel() {
         )}
 
       </div>
+
+      {/* Library Selection Modal */}
+      {showLibraryModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl">
+            <div className="flex justify-between items-center p-6 border-b border-gray-800">
+              <h2 className="text-xl font-black text-white flex items-center gap-3 tracking-wider">
+                <Folder className="w-6 h-6 text-pink-500" />
+                SELECT FROM VIDEO LIBRARY
+              </h2>
+              <button 
+                onClick={() => setShowLibraryModal(false)}
+                className="text-gray-500 hover:text-white transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 bg-[#111111]">
+              {libraryAssets.length === 0 ? (
+                <div className="text-center py-12">
+                  <Folder className="w-16 h-16 text-gray-800 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-gray-400">Library is empty</h3>
+                  <p className="text-sm text-gray-600 mt-1">Go to the Video Library page to upload videos first.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {libraryAssets.map(asset => (
+                    <div 
+                      key={asset._id} 
+                      onClick={async () => {
+                        try {
+                          await apiFetch(`${SOCKET_URL}/api/playlist/add-from-library`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ libraryId: asset._id })
+                          });
+                          setShowLibraryModal(false);
+                          fetchPlaylist();
+                        } catch (err) {
+                          alert('Failed to add video to playlist');
+                        }
+                      }}
+                      className="bg-[#2a2a2a] border border-gray-700 hover:border-pink-500 rounded-xl overflow-hidden cursor-pointer group transition-all"
+                    >
+                      <div className="aspect-video bg-black relative flex items-center justify-center">
+                        <Play className="w-8 h-8 text-gray-700 group-hover:text-pink-500 transition-colors" />
+                        <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {Math.floor(asset.duration / 3600)}:{String(Math.floor((asset.duration % 3600) / 60)).padStart(2, '0')}:{String(Math.floor(asset.duration % 60)).padStart(2, '0')}
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="text-xs font-bold text-gray-200 line-clamp-2" title={asset.title}>
+                          {asset.title}
+                        </h3>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

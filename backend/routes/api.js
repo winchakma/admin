@@ -10,6 +10,7 @@ const AdState = require('../models/AdState');
 const StreamState = require('../models/StreamState');
 const Channel = require('../models/Channel');
 const Overlay = require('../models/Overlay');
+const LibraryAsset = require('../models/LibraryAsset');
 const { protect } = require('../middleware/auth');
 
 // Configure Multer for file uploads
@@ -150,6 +151,76 @@ router.delete('/channels/:id', protect, async (req, res) => {
 });
 
 
+/* --- Library Routes --- */
+
+// Get all library assets
+router.get('/library', protect, async (req, res) => {
+  try {
+    const assets = await LibraryAsset.find().sort({ createdAt: -1 });
+    res.json(assets);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload and add video to library (not playlist)
+router.post('/library/upload', protect, upload.single('video'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
+    const fullPath = path.join(__dirname, '..', filePath);
+    const duration = await getVideoDuration(fullPath);
+
+    const newAsset = new LibraryAsset({
+      title: req.body.title || req.file.originalname,
+      filePath,
+      duration,
+      category: req.body.category || 'News'
+    });
+
+    await newAsset.save();
+    res.status(201).json(newAsset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a library asset
+router.delete('/library/:id', protect, async (req, res) => {
+  try {
+    const item = await LibraryAsset.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ error: 'Library asset not found' });
+    }
+
+    // Delete physical file
+    const fullPath = path.join(__dirname, '..', item.filePath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+
+    await LibraryAsset.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Asset deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// Update a library asset
+router.put('/library/:id', protect, async (req, res) => {
+  try {
+    const asset = await LibraryAsset.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.json(asset);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 /* --- Playlist Routes --- */
 
 // Get all playlist items sorted by orderIndex
@@ -222,6 +293,45 @@ router.post('/playlist/upload', protect, upload.single('video'), async (req, res
     });
 
     await newItem.save();
+    res.status(201).json(newItem);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add video to playlist FROM Library
+router.post('/playlist/add-from-library', protect, async (req, res) => {
+  try {
+    const { libraryId } = req.body;
+    if (!libraryId) {
+      return res.status(400).json({ error: 'libraryId is required' });
+    }
+
+    const libraryAsset = await LibraryAsset.findById(libraryId);
+    if (!libraryAsset) {
+      return res.status(404).json({ error: 'Library asset not found' });
+    }
+
+    const lastItem = await Playlist.findOne().sort('-orderIndex');
+    const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
+
+    const newItem = new Playlist({
+      title: libraryAsset.title,
+      filePath: libraryAsset.filePath,
+      duration: libraryAsset.duration,
+      category: libraryAsset.category,
+      orderIndex,
+      status: 'active'
+    });
+
+    await newItem.save();
+
+    // Notify clients
+    const updatedPlaylist = await Playlist.find().sort('orderIndex');
+    if (req.app.get('io')) {
+      req.app.get('io').emit('playlist_updated', updatedPlaylist);
+    }
+
     res.status(201).json(newItem);
   } catch (err) {
     res.status(500).json({ error: err.message });
