@@ -267,7 +267,7 @@ function AdminPanel() {
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/playlist`);
       const data = await res.json();
-      setPlaylist(data);
+      setPlaylist(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('API Offline, using local data');
     }
@@ -277,7 +277,7 @@ function AdminPanel() {
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/library`);
       const data = await res.json();
-      setLibraryAssets(data);
+      setLibraryAssets(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('Failed to fetch library');
     }
@@ -287,9 +287,19 @@ function AdminPanel() {
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/ads`);
       const data = await res.json();
-      setAds(data);
+      setAds(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('API Offline, could not fetch ads');
+    }
+  };
+
+  const fetchChannels = async () => {
+    try {
+      const res = await apiFetch(`${SOCKET_URL}/api/channels`);
+      const data = await res.json();
+      setChannels(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn('Failed to fetch channels');
     }
   };
 

@@ -53,7 +53,7 @@ export default function VideoLibrary() {
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/library`);
       const data = await res.json();
-      setLibraryAssets(data);
+      setLibraryAssets(Array.isArray(data) ? data : []);
     } catch (e) {
       console.warn('API Offline, using local data');
     }
