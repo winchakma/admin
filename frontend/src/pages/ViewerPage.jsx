@@ -314,7 +314,7 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                   {/* Ticker 1 Title */}
                   {overlays.ticker1Active && (
-                    <div className="bg-[#111111] border-r-[0.3vh] border-pink-600 px-[1.5vw] py-[1vh] rounded-l-[1vh] w-auto max-w-[20vw] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden text-ellipsis whitespace-nowrap text-[2vh] font-black font-sans shadow-inner">
+                    <div className="bg-white border-r-[0.3vh] border-gray-300 px-[1.5vw] py-[1vh] rounded-l-[1vh] w-auto max-w-[20vw] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden text-ellipsis whitespace-nowrap text-[2vh] font-black font-sans shadow-inner">
                       <span className="truncate">
                         {overlays.ticker1Title || 'Headline News 1'}
                       </span>
@@ -322,8 +322,8 @@ const ViewerPage = () => {
                   )}
                   {/* Ticker 1 Text */}
                   {overlays.ticker1Active && (
-                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-[1vw] py-[1vh] flex items-center overflow-hidden">
-                      <marquee className="font-normal flex-1 text-gray-100 text-[2.5vh]" scrollamount="4">{overlays.ticker1Text}</marquee>
+                    <div className="flex-1 bg-black border-y border-gray-800 px-[1vw] py-[1vh] flex items-center overflow-hidden">
+                      <marquee className="font-normal flex-1 text-white text-[2.5vh]" scrollamount="4">{overlays.ticker1Text}</marquee>
                     </div>
                   )}
                   {/* (Time bug moved to unified rotating bug below) */}
@@ -335,7 +335,7 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                   {/* Ticker 2 Title */}
                   {overlays.ticker2Active && (
-                    <div className="bg-[#111111] border-r-[0.3vh] border-blue-600 px-[1.5vw] py-[1vh] rounded-l-[1vh] w-auto max-w-[20vw] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden text-ellipsis whitespace-nowrap text-[2vh] font-black font-sans shadow-inner">
+                    <div className="bg-white border-r-[0.3vh] border-gray-300 px-[1.5vw] py-[1vh] rounded-l-[1vh] w-auto max-w-[20vw] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden text-ellipsis whitespace-nowrap text-[2vh] font-black font-sans shadow-inner">
                       <span className="truncate">
                         {overlays.ticker2Title || 'Headline News 2'}
                       </span>
@@ -343,8 +343,8 @@ const ViewerPage = () => {
                   )}
                   {/* Ticker 2 Text */}
                   {overlays.ticker2Active && (
-                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-[1vw] py-[1vh] flex items-center overflow-hidden">
-                      <marquee className="font-normal flex-1 text-gray-100 text-[2.5vh]" scrollamount="5">{overlays.ticker2Text}</marquee>
+                    <div className="flex-1 bg-black border-y border-gray-800 px-[1vw] py-[1vh] flex items-center overflow-hidden">
+                      <marquee className="font-normal flex-1 text-white text-[2.5vh]" scrollamount="5">{overlays.ticker2Text}</marquee>
                     </div>
                   )}
                   {/* Unified Rotating Time/Date Bug */}
