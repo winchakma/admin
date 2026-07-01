@@ -18,15 +18,27 @@ let azanPlayedToday = {
   dateFetched: null
 };
 
-// Fixed prayer schedule provided by the client
+// Fixed prayer schedule provided by the client (12-hour format)
 const staticPrayerTimes = {
-  0: { Fajr: '03:49', Zohr: '12:03', Asr: '15:22', Maghrib: '18:49', Isha: '20:17' }, // Sunday
-  1: { Fajr: '03:46', Zohr: '12:02', Asr: '15:20', Maghrib: '18:50', Isha: '20:19' }, // Monday
-  2: { Fajr: '03:47', Zohr: '12:02', Asr: '15:21', Maghrib: '18:50', Isha: '20:19' }, // Tuesday
-  3: { Fajr: '03:47', Zohr: '12:02', Asr: '15:21', Maghrib: '18:50', Isha: '20:17' }, // Wednesday
-  4: { Fajr: '03:48', Zohr: '12:02', Asr: '15:21', Maghrib: '18:50', Isha: '20:17' }, // Thursday
-  5: { Fajr: '03:48', Zohr: '12:03', Asr: '15:22', Maghrib: '18:50', Isha: '20:17' }, // Friday
-  6: { Fajr: '03:48', Zohr: '12:03', Asr: '15:22', Maghrib: '18:50', Isha: '20:17' }  // Saturday
+  0: { Fajr: '03:49 AM', Zohr: '12:03 PM', Asr: '03:22 PM', Maghrib: '06:49 PM', Isha: '08:17 PM' }, // Sunday
+  1: { Fajr: '03:46 AM', Zohr: '12:02 PM', Asr: '03:20 PM', Maghrib: '06:50 PM', Isha: '08:19 PM' }, // Monday
+  2: { Fajr: '03:47 AM', Zohr: '12:02 PM', Asr: '03:21 PM', Maghrib: '06:50 PM', Isha: '08:19 PM' }, // Tuesday
+  3: { Fajr: '03:47 AM', Zohr: '12:02 PM', Asr: '03:21 PM', Maghrib: '06:50 PM', Isha: '08:17 PM' }, // Wednesday
+  4: { Fajr: '03:48 AM', Zohr: '12:02 PM', Asr: '03:21 PM', Maghrib: '06:50 PM', Isha: '08:17 PM' }, // Thursday
+  5: { Fajr: '03:48 AM', Zohr: '12:03 PM', Asr: '03:22 PM', Maghrib: '06:50 PM', Isha: '08:17 PM' }, // Friday
+  6: { Fajr: '03:48 AM', Zohr: '12:03 PM', Asr: '03:22 PM', Maghrib: '06:50 PM', Isha: '08:17 PM' }  // Saturday
+};
+
+const parseTime12hToMinutes = (timeStr) => {
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  if (hours === '12') {
+    hours = '00';
+  }
+  if (modifier === 'PM') {
+    hours = parseInt(hours, 10) + 12;
+  }
+  return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
 };
 
 const updatePrayerTimes = () => {
@@ -41,12 +53,15 @@ const updatePrayerTimes = () => {
   const currentDayOfWeek = d.getDay(); // 0-6
   todayPrayerTimes = staticPrayerTimes[currentDayOfWeek];
   
+  // Initialize current time in minutes to prevent spamming past azans on server restart
+  const currentMinutes = d.getHours() * 60 + d.getMinutes();
+  
   azanPlayedToday = {
-    Fajr: false,
-    Zohr: false,
-    Asr: false,
-    Maghrib: false,
-    Isha: false,
+    Fajr: parseTime12hToMinutes(todayPrayerTimes.Fajr) <= currentMinutes,
+    Zohr: parseTime12hToMinutes(todayPrayerTimes.Zohr) <= currentMinutes,
+    Asr: parseTime12hToMinutes(todayPrayerTimes.Asr) <= currentMinutes,
+    Maghrib: parseTime12hToMinutes(todayPrayerTimes.Maghrib) <= currentMinutes,
+    Isha: parseTime12hToMinutes(todayPrayerTimes.Isha) <= currentMinutes,
     dateFetched: dateStr
   };
   console.log(`[Azan System] Loaded Static Prayer Times for Dhaka (${dateStr}):`, todayPrayerTimes);
@@ -90,14 +105,14 @@ const startScheduler = (io) => {
       // 2. Check if it's Azan time right now
       if (todayPrayerTimes && (!adState.activeAd || !adState.activeAd.startedAt)) {
         const dhakaDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
-        const hh = dhakaDate.getHours().toString().padStart(2, '0');
-        const mm = dhakaDate.getMinutes().toString().padStart(2, '0');
-        const currentDhakaTimeStr = `${hh}:${mm}`;
+        const currentMinutes = dhakaDate.getHours() * 60 + dhakaDate.getMinutes();
 
-        for (const [prayer, time] of Object.entries(todayPrayerTimes)) {
-          if (currentDhakaTimeStr === time && !azanPlayedToday[prayer]) {
+        for (const [prayer, timeStr] of Object.entries(todayPrayerTimes)) {
+          const prayerMinutes = parseTime12hToMinutes(timeStr);
+          
+          if (currentMinutes >= prayerMinutes && !azanPlayedToday[prayer]) {
             azanPlayedToday[prayer] = true;
-            console.log(`[Azan System] It is exactly time for ${prayer} Azan (${time}). Triggering video...`);
+            console.log(`[Azan System] Time reached for ${prayer} Azan (${timeStr}). Triggering video...`);
 
             try {
               // Priority 1: Exact match (e.g. "Maghrib")
