@@ -618,8 +618,8 @@ function AdminPanel() {
                       <div className={`flex w-full shadow-lg ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                         {/* Ticker 1 Title */}
                         {overlays.ticker1Active && (
-                          <div className="bg-[#111111] border-r border-pink-600 px-1 sm:px-2 py-1 rounded-l w-[22%] sm:w-[18%] md:w-[15%] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden">
-                            <span className="whitespace-nowrap origin-center transition-transform" style={{ transform: `scale(${Math.min(1, 10 / Math.max(1, (overlays.ticker1Title || '').length))})` }}>
+                          <div className="bg-[#111111] border-r border-pink-600 px-2 sm:px-4 py-1 rounded-l w-auto max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
+                            <span className="truncate">
                               {overlays.ticker1Title}
                             </span>
                           </div>
@@ -639,8 +639,8 @@ function AdminPanel() {
                       <div className={`flex w-full shadow-lg ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                         {/* Ticker 2 Title */}
                         {overlays.ticker2Active && (
-                          <div className="bg-[#111111] border-r border-blue-600 px-1 sm:px-2 py-1 rounded-l w-[22%] sm:w-[18%] md:w-[15%] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden">
-                            <span className="whitespace-nowrap origin-center transition-transform" style={{ transform: `scale(${Math.min(1, 10 / Math.max(1, (overlays.ticker2Title || '').length))})` }}>
+                          <div className="bg-[#111111] border-r border-blue-600 px-2 sm:px-4 py-1 rounded-l w-auto max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
+                            <span className="truncate">
                               {overlays.ticker2Title}
                             </span>
                           </div>
@@ -1086,8 +1086,8 @@ function AdminPanel() {
                   {overlays.ticker1Active && (
                     <div className="flex gap-1 w-full shadow-md">
                       {/* Ticker 1 Title */}
-                      <div className="bg-[#111111] border border-gray-800 px-2 py-1.5 rounded-l w-[80px] sm:w-[110px] shrink-0 text-center flex items-center justify-center uppercase tracking-wide overflow-hidden pointer-events-auto">
-                        <span className="whitespace-nowrap origin-center transition-transform" style={{ transform: `scale(${Math.min(1, 10 / Math.max(1, (overlays.ticker1Title || '').length))})` }}>
+                      <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-l w-auto max-w-[30%] shrink-0 text-center flex items-center justify-center uppercase tracking-wide overflow-hidden pointer-events-auto text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
+                        <span className="truncate">
                           {overlays.ticker1Title}
                         </span>
                       </div>
@@ -1108,8 +1108,8 @@ function AdminPanel() {
                   {overlays.ticker2Active && (
                     <div className="flex gap-1 w-full shadow-md">
                       {/* Ticker 2 Title */}
-                      <div className="bg-[#111111] border border-gray-800 px-2 py-1.5 rounded-l w-[80px] sm:w-[110px] shrink-0 text-center flex items-center justify-center uppercase tracking-wide overflow-hidden pointer-events-auto">
-                        <span className="whitespace-nowrap origin-center transition-transform" style={{ transform: `scale(${Math.min(1, 10 / Math.max(1, (overlays.ticker2Title || '').length))})` }}>
+                      <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-l w-auto max-w-[30%] shrink-0 text-center flex items-center justify-center uppercase tracking-wide overflow-hidden pointer-events-auto text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
+                        <span className="truncate">
                           {overlays.ticker2Title}
                         </span>
                       </div>
