@@ -272,7 +272,9 @@ const ViewerPage = () => {
                   {/* Ticker 1 Title */}
                   {overlays.ticker1Active && (
                     <div className="bg-[#111111] border-r-2 border-pink-600 px-2 md:px-3 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden">
-                      <span className="truncate w-full text-center">{overlays.ticker1Title || 'Headline News 1'}</span>
+                      <span className="whitespace-nowrap origin-center transition-transform" style={{ transform: `scale(${Math.min(1, 10 / Math.max(1, (overlays.ticker1Title || 'Headline News 1').length))})` }}>
+                        {overlays.ticker1Title || 'Headline News 1'}
+                      </span>
                     </div>
                   )}
                   {/* Ticker 1 Text */}
@@ -291,7 +293,9 @@ const ViewerPage = () => {
                   {/* Ticker 2 Title */}
                   {overlays.ticker2Active && (
                     <div className="bg-[#111111] border-r-2 border-blue-600 px-2 md:px-3 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden">
-                      <span className="truncate w-full text-center">{overlays.ticker2Title || 'Headline News 2'}</span>
+                      <span className="whitespace-nowrap origin-center transition-transform" style={{ transform: `scale(${Math.min(1, 10 / Math.max(1, (overlays.ticker2Title || 'Headline News 2').length))})` }}>
+                        {overlays.ticker2Title || 'Headline News 2'}
+                      </span>
                     </div>
                   )}
                   {/* Ticker 2 Text */}
