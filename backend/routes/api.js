@@ -7,6 +7,7 @@ const { exec } = require('child_process');
 const Playlist = require('../models/Playlist');
 const AdItem = require('../models/AdItem');
 const AdState = require('../models/AdState');
+const StreamState = require('../models/StreamState');
 const Channel = require('../models/Channel');
 const Overlay = require('../models/Overlay');
 const { protect } = require('../middleware/auth');
@@ -441,16 +442,21 @@ router.post('/ads/:id/play', protect, async (req, res) => {
       adState = new AdState({ totalAdTimeOffset: 0 });
     }
 
-     // If there's already an active ad, transition it (add to offset)
+     // If there's already an active ad, transition it
     if (adState.activeAd && adState.activeAd.startedAt) {
       let elapsed = (Date.now() - new Date(adState.activeAd.startedAt).getTime()) / 1000;
       if (isNaN(elapsed) || elapsed < 0) elapsed = 0;
       const currentOffset = typeof adState.totalAdTimeOffset === 'number' && !isNaN(adState.totalAdTimeOffset) ? adState.totalAdTimeOffset : 0;
       const adDuration = typeof adState.activeAd.duration === 'number' && !isNaN(adState.activeAd.duration) ? adState.activeAd.duration : 0;
-      if (elapsed < adDuration) {
-        adState.totalAdTimeOffset = currentOffset + elapsed;
-      } else {
-        adState.totalAdTimeOffset = currentOffset + adDuration;
+      
+      let actualElapsed = elapsed < adDuration ? elapsed : adDuration;
+      adState.totalAdTimeOffset = currentOffset + actualElapsed;
+
+      // Shift StreamState
+      const streamState = await StreamState.findOne();
+      if (streamState && streamState.currentVideoStartTime) {
+        streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (actualElapsed * 1000));
+        await streamState.save();
       }
     }
 
@@ -477,15 +483,20 @@ router.post('/ads/stop', protect, async (req, res) => {
       if (isNaN(elapsed) || elapsed < 0) elapsed = 0;
       const currentOffset = typeof adState.totalAdTimeOffset === 'number' && !isNaN(adState.totalAdTimeOffset) ? adState.totalAdTimeOffset : 0;
       const adDuration = typeof adState.activeAd.duration === 'number' && !isNaN(adState.activeAd.duration) ? adState.activeAd.duration : 0;
-      if (elapsed < adDuration) {
-        adState.totalAdTimeOffset = currentOffset + elapsed;
-      } else {
-        adState.totalAdTimeOffset = currentOffset + adDuration;
-      }
+      
+      let actualElapsed = elapsed < adDuration ? elapsed : adDuration;
+      adState.totalAdTimeOffset = currentOffset + actualElapsed;
       adState.activeAd = null;
       await adState.save();
+
+      // Shift StreamState forward by ad duration
+      const streamState = await StreamState.findOne();
+      if (streamState && streamState.currentVideoStartTime) {
+        streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (actualElapsed * 1000));
+        await streamState.save();
+      }
     }
-    res.json({ message: 'Ad playout stopped' });
+    res.json({ message: 'Ad stopped' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

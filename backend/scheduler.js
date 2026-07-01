@@ -5,6 +5,7 @@ const Playlist = require('./models/Playlist');
 const Overlay = require('./models/Overlay');
 const AdState = require('./models/AdState');
 const AdItem = require('./models/AdItem');
+const StreamState = require('./models/StreamState');
 const https = require('https');
 const { startFfmpegStream, stopFfmpegStream } = require('./ffmpegEngine');
 
@@ -182,6 +183,13 @@ const startScheduler = (io) => {
           adState.totalAdTimeOffset = (adState.totalAdTimeOffset || 0) + adDuration;
           adState.activeAd = null;
           await adState.save();
+
+          // Shift StreamState to perfectly resume
+          let streamState = await StreamState.findOne();
+          if (streamState && streamState.currentVideoStartTime) {
+            streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (adDuration * 1000));
+            await streamState.save();
+          }
         }
       }
 
@@ -193,27 +201,45 @@ const startScheduler = (io) => {
         return;
       }
 
-      // Calculate total duration
-      const totalDuration = playlist.reduce((sum, item) => sum + item.duration, 0);
-      const now = Date.now();
-      const adjustedNow = (now / 1000) - (adState.totalAdTimeOffset || 0);
-      const currentCycleTime = adjustedNow % totalDuration;
-
-      let accumulatedTime = 0;
-      let selectedItem = playlist[0];
-      let nextItem = playlist.length > 1 ? playlist[1] : playlist[0];
-      let offset = 0;
-
-      for (let i = 0; i < playlist.length; i++) {
-        const item = playlist[i];
-        if (currentCycleTime >= accumulatedTime && currentCycleTime < accumulatedTime + item.duration) {
-          selectedItem = item;
-          nextItem = playlist[(i + 1) % playlist.length]; // Mathematically safe wrap-around
-          offset = currentCycleTime - accumulatedTime;
-          break;
-        }
-        accumulatedTime += item.duration;
+      // Fetch or initialize StreamState
+      let streamState = await StreamState.findOne();
+      if (!streamState) {
+        streamState = new StreamState({ currentVideoId: playlist[0]._id, currentVideoStartTime: Date.now() });
+        await streamState.save();
       }
+
+      // Find the current video in the playlist
+      let currentIndex = playlist.findIndex(item => item._id.toString() === streamState.currentVideoId?.toString());
+      
+      // If the current video was deleted or not found, jump back to index 0
+      if (currentIndex === -1) {
+        currentIndex = 0;
+        streamState.currentVideoId = playlist[0]._id;
+        streamState.currentVideoStartTime = Date.now();
+        await streamState.save();
+      }
+
+      let selectedItem = playlist[currentIndex];
+      let offset = (Date.now() - new Date(streamState.currentVideoStartTime).getTime()) / 1000;
+
+      // Ensure offset is safe
+      if (isNaN(offset) || offset < 0) {
+        offset = 0;
+        streamState.currentVideoStartTime = Date.now();
+        await streamState.save();
+      }
+
+      // If the current video has finished playing naturally
+      if (offset >= selectedItem.duration) {
+        currentIndex = (currentIndex + 1) % playlist.length;
+        selectedItem = playlist[currentIndex];
+        streamState.currentVideoId = selectedItem._id;
+        streamState.currentVideoStartTime = Date.now();
+        await streamState.save();
+        offset = 0;
+      }
+
+      let nextItem = playlist[(currentIndex + 1) % playlist.length];
 
       currentStatus.isPlaying = true;
       currentStatus.activeVideo = {
