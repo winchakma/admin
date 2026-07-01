@@ -234,19 +234,8 @@ const ViewerPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#111111] text-white font-sans flex flex-col items-center pt-8 sm:pt-16 pb-20 px-4">
-      
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 flex items-center justify-between px-6 py-4 bg-[#111111]/90 backdrop-blur border-b border-gray-800 z-50">
-        <div className="flex items-center space-x-6">
-          <div className="text-2xl font-bold text-pink-500 mr-8">MS BD SHOP ~ LTD</div>
-        </div>
-        <div>
-          <Link to="/login" className="text-xs text-gray-500 hover:text-white transition-colors">Admin Login</Link>
-        </div>
-      </header>
-
-      {/* Main Video Player aligned with Admin Preview */}
+    <div className="w-screen h-screen overflow-hidden bg-black relative">
+      {/* Main Video Player strictly full screen */}
       <div 
         ref={wrapperRef}
         onMouseMove={resetIdleTimer}
@@ -256,7 +245,7 @@ const ViewerPage = () => {
           setIsHovering(false);
           clearTimeout(hideControlsTimeoutRef.current);
         }}
-        className={`w-full max-w-6xl mx-auto bg-black rounded-lg overflow-hidden shadow-2xl relative aspect-video mt-10 group ${!isHovering ? 'cursor-none' : ''}`}
+        className={`absolute inset-0 w-full h-full bg-black group ${!isHovering ? 'cursor-none' : ''}`}
       >
         {status.activeVideo && overlays.isBroadcastActive ? (
           <>
@@ -489,10 +478,6 @@ const ViewerPage = () => {
             </div>
           </>
         )}
-      </div>
-      
-      <div className="mt-8 text-center text-gray-500 text-sm max-w-2xl font-medium tracking-wide">
-        You are watching the live synchronized linear playout. Video playback, advertisements, and news overlays are controlled strictly by the broadcast administrator.
       </div>
     </div>
   );
