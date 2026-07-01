@@ -254,21 +254,24 @@ const ViewerPage = () => {
               </div>
             )}
 
-            {/* OTS graphic overlay */}
-            {overlays.otsActive && overlays.otsImagePath && (
-              <div className="absolute right-4 bottom-[90px] w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
-                <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
-              </div>
-            )}
 
-            {/* Tickers & Time/Date Aligned Bottom Rows */}
-            <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 z-20 text-[2.5vw] md:text-[1.8vw] lg:text-[1.2vw] xl:text-[1vw] font-bold text-white select-none drop-shadow-lg">
-              {/* Row 1 (Ticker 1 & Time) */}
+
+            {/* Tickers, OTS & Time/Date Aligned Bottom Rows */}
+            <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 z-20 text-[2.5vw] md:text-[1.8vw] lg:text-[1.2vw] xl:text-[1vw] font-bold text-white select-none drop-shadow-lg pointer-events-none">
+              
+              {/* OTS graphic overlay (Dynamically stacked above tickers) */}
+              {overlays.otsActive && overlays.otsImagePath && (
+                <div className="self-end w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg shadow-lg mb-2 pointer-events-auto">
+                  <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                </div>
+              )}
+
+              {/* Row 1 (Ticker 1) */}
               {overlays.ticker1Active && (
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                   {/* Ticker 1 Title */}
                   {overlays.ticker1Active && (
-                    <div className="bg-[#111111] border-r-2 border-pink-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg min-w-[15%] md:min-w-[12%] text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap">
+                    <div className="bg-[#111111] border-r-2 border-pink-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap overflow-hidden text-ellipsis">
                       {overlays.ticker1Title || 'Headline News 1'}
                     </div>
                   )}
@@ -287,7 +290,7 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                   {/* Ticker 2 Title */}
                   {overlays.ticker2Active && (
-                    <div className="bg-[#111111] border-r-2 border-blue-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg min-w-[15%] md:min-w-[12%] text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap">
+                    <div className="bg-[#111111] border-r-2 border-blue-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis">
                       {overlays.ticker2Title || 'Headline News 2'}
                     </div>
                   )}
@@ -299,7 +302,7 @@ const ViewerPage = () => {
                   )}
                   {/* Unified Rotating Time/Date Bug */}
                   {(overlays.showDate || overlays.showTime) && (
-                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-4 md:px-6 py-2 md:py-3 min-w-[12%] md:min-w-[10%] text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 ${!overlays.ticker2Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
+                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-2 md:px-4 py-2 md:py-3 w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
                       {rotationIndex === 0 && <span className="animate-pulse">{currentTimeStr}</span>}
                       {rotationIndex === 1 && <span>{currentDayStr}</span>}
                       {rotationIndex === 2 && <span>{currentDateStr}</span>}

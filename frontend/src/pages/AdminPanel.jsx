@@ -574,21 +574,24 @@ function AdminPanel() {
                     </div>
                   )}
 
-                  {/* OTS Overlay */}
-                  {overlays.otsActive && overlays.otsImagePath && (
-                    <div className="absolute right-2.5 bottom-[42px] w-9 h-9 sm:w-11 sm:h-11 bg-[#111111] border border-gray-800 flex items-center justify-center p-1 rounded z-20 shadow-md">
-                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
-                    </div>
-                  )}
 
-                  {/* Tickers & Time/Date Aligned Bottom Rows */}
-                  <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-0.5 z-20 text-[8px] sm:text-[10px] font-bold text-white select-none drop-shadow">
-                    {/* Row 1 (Ticker 1 & Time) */}
+
+                  {/* Tickers, OTS & Time/Date Aligned Bottom Rows */}
+                  <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-0.5 z-20 text-[8px] sm:text-[10px] font-bold text-white select-none drop-shadow pointer-events-none">
+                    
+                    {/* OTS Overlay */}
+                    {overlays.otsActive && overlays.otsImagePath && (
+                      <div className="self-end w-9 h-9 sm:w-11 sm:h-11 bg-[#111111] border border-gray-800 flex items-center justify-center p-1 rounded shadow-md mb-1 pointer-events-auto">
+                        <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                      </div>
+                    )}
+
+                    {/* Row 1 (Ticker 1) */}
                     {overlays.ticker1Active && (
                       <div className={`flex w-full shadow-lg ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                         {/* Ticker 1 Title */}
                         {overlays.ticker1Active && (
-                          <div className="bg-[#111111] border-r border-pink-600 px-2 py-1 rounded-l min-w-[15%] text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap">
+                          <div className="bg-[#111111] border-r border-pink-600 px-2 py-1 rounded-l w-[22%] sm:w-[18%] md:w-[15%] shrink-0 text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap overflow-hidden text-ellipsis">
                             {overlays.ticker1Title}
                           </div>
                         )}
@@ -607,7 +610,7 @@ function AdminPanel() {
                       <div className={`flex w-full shadow-lg ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                         {/* Ticker 2 Title */}
                         {overlays.ticker2Active && (
-                          <div className="bg-[#111111] border-r border-blue-600 px-2 py-1 rounded-l min-w-[15%] text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap">
+                          <div className="bg-[#111111] border-r border-blue-600 px-2 py-1 rounded-l w-[22%] sm:w-[18%] md:w-[15%] shrink-0 text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis">
                             {overlays.ticker2Title}
                           </div>
                         )}
@@ -619,7 +622,7 @@ function AdminPanel() {
                         )}
                         {/* Unified Rotating Time/Date Bug */}
                         {(overlays.showDate || overlays.showTime) && (
-                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-2 py-1 min-w-[12%] text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
+                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-1 sm:px-2 py-1 w-[22%] sm:w-[18%] md:w-[15%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
                             {rotationIndex === 0 && <span className="animate-pulse">{currentTimeStr || 'Time'}</span>}
                             {rotationIndex === 1 && <span>{currentDayStr || 'Day'}</span>}
                             {rotationIndex === 2 && <span>{currentDateStr || 'Date'}</span>}
@@ -1028,15 +1031,18 @@ function AdminPanel() {
                   Logo
                 </div>
 
-                {/* OTS graphic overlay in public player */}
-                {overlays.otsActive && overlays.otsImagePath && (
-                  <div className="absolute right-4 bottom-24 w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg z-20 shadow-lg">
-                    <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
-                  </div>
-                )}
 
-                {/* Tickers & Time/Date Aligned Bottom Rows */}
-                <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 z-20 text-[9px] sm:text-xs font-bold text-white select-none">
+
+                {/* Tickers, OTS & Time/Date Aligned Bottom Rows */}
+                <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 z-20 text-[9px] sm:text-xs font-bold text-white select-none pointer-events-none">
+                  
+                  {/* OTS graphic overlay in public player */}
+                  {overlays.otsActive && overlays.otsImagePath && (
+                    <div className="self-end w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg shadow-lg mb-2 pointer-events-auto">
+                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  )}
+
                   {/* Row 1 (Ticker 1 & Time) */}
                   {overlays.ticker1Active && (
                     <div className="flex gap-1 w-full shadow-md">

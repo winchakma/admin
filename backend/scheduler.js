@@ -214,7 +214,8 @@ const startScheduler = (io) => {
       io.emit('stream_status', currentStatus);
 
       // Attempt to manage local FFmpeg playout if running under supportive system
-      manageLocalPlayout(selectedItem, offset);
+      // FFmpeg disabled to save CPU on free tier
+      // manageLocalPlayout(selectedItem, offset);
 
     } catch (err) {
       console.error('Scheduler error:', err.message);
