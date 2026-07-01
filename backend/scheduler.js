@@ -186,11 +186,14 @@ const startScheduler = (io) => {
 
       let accumulatedTime = 0;
       let selectedItem = playlist[0];
+      let nextItem = playlist.length > 1 ? playlist[1] : playlist[0];
       let offset = 0;
 
-      for (const item of playlist) {
+      for (let i = 0; i < playlist.length; i++) {
+        const item = playlist[i];
         if (currentCycleTime >= accumulatedTime && currentCycleTime < accumulatedTime + item.duration) {
           selectedItem = item;
+          nextItem = playlist[(i + 1) % playlist.length]; // Mathematically safe wrap-around
           offset = currentCycleTime - accumulatedTime;
           break;
         }
@@ -204,6 +207,13 @@ const startScheduler = (io) => {
         filePath: selectedItem.filePath,
         duration: selectedItem.duration,
         offset: offset
+      };
+      
+      currentStatus.nextVideo = {
+        id: nextItem._id,
+        title: nextItem.title,
+        filePath: nextItem.filePath,
+        duration: nextItem.duration
       };
       currentStatus.elapsedTime = Math.floor(offset);
       currentStatus.remainingTime = Math.max(0, Math.floor(selectedItem.duration - offset));

@@ -35,10 +35,13 @@ function AdminPanel() {
   const [playlist, setPlaylist] = useState([]);
   const [isMuted, setIsMuted] = useState(true);
 
-  const previewVideoRef = useRef(null);
-  const publicVideoRef = useRef(null);
-  const previewHlsRef = useRef(null);
-  const publicHlsRef = useRef(null);
+  const previewVideo1Ref = useRef(null);
+  const previewVideo2Ref = useRef(null);
+  const [previewActivePlayer, setPreviewActivePlayer] = useState(1);
+  
+  const publicVideo1Ref = useRef(null);
+  const publicVideo2Ref = useRef(null);
+  const [publicActivePlayer, setPublicActivePlayer] = useState(1);
   
   const [overlays, setOverlays] = useState({
     ticker1Text: 'Headline Text',
@@ -116,73 +119,84 @@ function AdminPanel() {
     return () => clearInterval(timer);
   }, []);
 
-  // Video playback syncing effect
-  useEffect(() => {
+  // Dual Video Engine logic inside a reusable function
+  const setupDualPlayer = (video1Ref, video2Ref, activePlayer, setActivePlayer) => {
     if (!status.activeVideo) {
-      if (previewVideoRef.current) previewVideoRef.current.src = '';
-      if (publicVideoRef.current) publicVideoRef.current.src = '';
+      if (video1Ref.current) video1Ref.current.src = '';
+      if (video2Ref.current) video2Ref.current.src = '';
       return;
     }
+
+    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+    const nextEl = activePlayer === 1 ? video2Ref.current : video1Ref.current;
+    if (!currentEl || !nextEl) return;
 
     const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
     const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
 
-    const setupPlayer = (videoEl, hlsRef) => {
-      if (!videoEl) return;
-
-      const isHls = videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8');
-
-      if (isHls) {
-        if (Hls.isSupported()) {
-          if (hlsRef.current) {
-            hlsRef.current.destroy();
-          }
-          const hls = new Hls();
-          hlsRef.current = hls;
-          hls.attachMedia(videoEl);
-          hls.loadSource(videoUrl);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            videoEl.play().catch(e => console.log("Autoplay blocked:", e));
-          });
-        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-          videoEl.src = videoUrl;
-          videoEl.addEventListener('loadedmetadata', () => {
-            videoEl.play().catch(e => console.log("Autoplay blocked:", e));
-          });
+    if (currentEl.src && !currentEl.src.endsWith(videoUrl.split('?')[0]) && currentEl.src !== videoUrl) {
+      if (nextEl.src && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
+        nextEl.currentTime = status.activeVideo.offset || 0;
+        nextEl.play().catch(e => console.log(e));
+        setActivePlayer(activePlayer === 1 ? 2 : 1);
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          currentEl.src = nextUrl;
+          currentEl.load();
         }
       } else {
-        if (hlsRef.current) {
-          hlsRef.current.destroy();
-          hlsRef.current = null;
+        currentEl.src = videoUrl;
+        currentEl.currentTime = status.activeVideo.offset || 0;
+        currentEl.play().catch(e => console.log(e));
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          nextEl.src = nextUrl;
+          nextEl.load();
         }
-        if (videoEl.src !== videoUrl) {
-          videoEl.src = videoUrl;
-        }
-        
-        const currentDiff = Math.abs(videoEl.currentTime - status.activeVideo.offset);
-        if (currentDiff > 3) {
-          videoEl.currentTime = status.activeVideo.offset;
-        }
-        
-        videoEl.play().catch(e => console.log("Autoplay blocked:", e));
       }
-    };
+    } else if (!currentEl.src) {
+      currentEl.src = videoUrl;
+      currentEl.currentTime = status.activeVideo.offset || 0;
+      currentEl.play().catch(e => console.log(e));
+    } else {
+      const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+      if (currentDiff > 2) {
+        currentEl.currentTime = status.activeVideo.offset;
+      }
+      if (currentEl.paused) {
+        currentEl.play().catch(e => console.log(e));
+      }
+      if (status.nextVideo) {
+        const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        if (!nextEl.src || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
+          nextEl.src = nextUrl;
+          nextEl.load();
+        }
+      }
+    }
+  };
 
-    setupPlayer(previewVideoRef.current, previewHlsRef);
-    setupPlayer(publicVideoRef.current, publicHlsRef);
-
-  }, [status.activeVideo?.id, status.activeVideo?.filePath, activeTab]);
+  useEffect(() => {
+    // Only setup the players that are currently mounted (depends on activeTab)
+    if (activeTab === 'admin') {
+      setupDualPlayer(previewVideo1Ref, previewVideo2Ref, previewActivePlayer, setPreviewActivePlayer);
+    } else if (activeTab === 'public') {
+      setupDualPlayer(publicVideo1Ref, publicVideo2Ref, publicActivePlayer, setPublicActivePlayer);
+    }
+  }, [status.activeVideo, activeTab, previewActivePlayer, publicActivePlayer]);
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
-    if (previewVideoRef.current) {
-      previewVideoRef.current.play().catch(err => console.log(err));
-    }
-    if (publicVideoRef.current) {
-      publicVideoRef.current.play().catch(err => console.log(err));
-    }
+    const prev1 = previewActivePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current;
+    if (prev1) prev1.play().catch(e => console.log(e));
+    
+    const pub1 = publicActivePlayer === 1 ? publicVideo1Ref.current : publicVideo2Ref.current;
+    if (pub1) pub1.play().catch(e => console.log(e));
   };
 
   // Connect Socket.io
@@ -541,12 +555,20 @@ function AdminPanel() {
                 {/* Simulated screen box */}
                 <div className="aspect-video w-full bg-black rounded-lg border border-[#50BF7B] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
                   {status.activeVideo ? (
-                    <video 
-                      ref={previewVideoRef} 
-                      className="absolute inset-0 w-full h-full object-cover z-0" 
-                      playsInline 
-                      muted={isMuted}
-                    />
+                      <>
+                        <video 
+                          ref={previewVideo1Ref} 
+                          className={`absolute inset-0 w-full h-full object-cover z-0 ${previewActivePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                          playsInline 
+                          muted={isMuted}
+                        />
+                        <video 
+                          ref={previewVideo2Ref} 
+                          className={`absolute inset-0 w-full h-full object-cover z-0 ${previewActivePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                          playsInline 
+                          muted={isMuted}
+                        />
+                      </>
                   ) : (
                     <div className="absolute inset-0 bg-[#66DE93] z-0" />
                   )}
@@ -1007,12 +1029,20 @@ function AdminPanel() {
             <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl relative">
               <div className="aspect-video w-full bg-black relative overflow-hidden flex flex-col justify-between p-4 sm:p-6">
                 {status.activeVideo ? (
-                  <video 
-                    ref={publicVideoRef} 
-                    className="absolute inset-0 w-full h-full object-cover z-0" 
-                    playsInline 
-                    muted={isMuted}
-                  />
+                  <>
+                    <video 
+                      ref={publicVideo1Ref} 
+                      className={`absolute inset-0 w-full h-full object-cover z-0 ${publicActivePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                      playsInline 
+                      muted={isMuted}
+                    />
+                    <video 
+                      ref={publicVideo2Ref} 
+                      className={`absolute inset-0 w-full h-full object-cover z-0 ${publicActivePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                      playsInline 
+                      muted={isMuted}
+                    />
+                  </>
                 ) : (
                   <div className="absolute inset-0 bg-[#66DE93] z-0" />
                 )}

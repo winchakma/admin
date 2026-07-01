@@ -14,9 +14,10 @@ const ViewerPage = () => {
   const hideControlsTimeoutRef = useRef(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState('Auto');
-  const videoRef = useRef(null);
+  const video1Ref = useRef(null);
+  const video2Ref = useRef(null);
+  const [activePlayer, setActivePlayer] = useState(1);
   const wrapperRef = useRef(null);
-  const hlsRef = useRef(null);
   const socketRef = useRef(null);
 
   const [overlays, setOverlays] = useState({
@@ -118,72 +119,90 @@ const ViewerPage = () => {
     return () => s.disconnect();
   }, []);
 
-  // Video playback syncing effect
+  // Dual Video Playback & Sync Engine
   useEffect(() => {
     if (!status.activeVideo || !status.isPlaying || !overlays.isBroadcastActive) {
-      if (videoRef.current) {
-        videoRef.current.src = '';
-      }
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      if (video1Ref.current) video1Ref.current.src = '';
+      if (video2Ref.current) video2Ref.current.src = '';
       return;
     }
 
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
+    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+    const nextEl = activePlayer === 1 ? video2Ref.current : video1Ref.current;
+    if (!currentEl || !nextEl) return;
 
     const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
     const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
 
-    const isHls = videoUrl.endsWith('.m3u8') || videoUrl.includes('.m3u8');
-
-    if (isHls) {
-      if (Hls.isSupported()) {
-        if (hlsRef.current) {
-          hlsRef.current.destroy();
+    // 1. Transition Check (Video Switched)
+    // We check if the URL we are SUPPOSED to play doesn't match the CURRENT player
+    if (currentEl.src && !currentEl.src.endsWith(videoUrl.split('?')[0]) && currentEl.src !== videoUrl) {
+      // Is the next video preloaded in the background player?
+      if (nextEl.src && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
+        // PERFECT! It's preloaded. Swap instantly!
+        nextEl.currentTime = status.activeVideo.offset || 0;
+        nextEl.play().catch(e => console.log("Autoplay blocked:", e));
+        setActivePlayer(activePlayer === 1 ? 2 : 1);
+        
+        // Now preload the NEW nextVideo in the background
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          currentEl.src = nextUrl;
+          currentEl.load();
         }
-        const hls = new Hls();
-        hlsRef.current = hls;
-        hls.attachMedia(videoEl);
-        hls.loadSource(videoUrl);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoEl.play().catch(e => console.log("Autoplay blocked:", e));
-        });
-      } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-        videoEl.src = videoUrl;
-        videoEl.addEventListener('loadedmetadata', () => {
-          videoEl.play().catch(e => console.log("Autoplay blocked:", e));
-        });
+      } else {
+        // Fallback: Hard switch if preload failed or just started
+        currentEl.src = videoUrl;
+        currentEl.currentTime = status.activeVideo.offset || 0;
+        currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+        
+        // Set up preload
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          nextEl.src = nextUrl;
+          nextEl.load();
+        }
       }
+    } else if (!currentEl.src) {
+      // First ever load
+      currentEl.src = videoUrl;
+      currentEl.currentTime = status.activeVideo.offset || 0;
+      currentEl.play().catch(e => console.log("Autoplay blocked:", e));
     } else {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
+      // 2. Sync Enforcement (Runs every second because status.activeVideo is a new object reference)
+      const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+      // Stricter sync tolerance (2 seconds max drift before correction)
+      if (currentDiff > 2) {
+        currentEl.currentTime = status.activeVideo.offset;
       }
-      if (videoEl.src !== videoUrl) {
-        videoEl.src = videoUrl;
+      if (currentEl.paused && !isPaused) {
+        currentEl.play().catch(e => console.log("Autoplay blocked:", e));
       }
-      
-      const currentDiff = Math.abs(videoEl.currentTime - status.activeVideo.offset);
-      if (currentDiff > 3) {
-        videoEl.currentTime = status.activeVideo.offset;
+
+      // Keep preload updated just in case admin changes the queue
+      if (status.nextVideo) {
+        const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        if (!nextEl.src || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
+          nextEl.src = nextUrl;
+          nextEl.load();
+        }
       }
-      
-      videoEl.play().catch(e => console.log("Autoplay blocked:", e));
     }
-  }, [status.activeVideo?.id, status.activeVideo?.filePath, overlays.isBroadcastActive]);
+  }, [status.activeVideo, overlays.isBroadcastActive]); // IMPORTANT: Depends on the whole activeVideo object to trigger every second!
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
     setIsPaused(false);
-    if (videoRef.current) {
-      videoRef.current.play().catch(err => console.log(err));
-      videoRef.current.muted = false;
-      videoRef.current.volume = volume;
+    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+    if (currentEl) {
+      currentEl.play().catch(err => console.log(err));
+      currentEl.muted = false;
+      currentEl.volume = volume;
     }
   };
 
@@ -213,12 +232,20 @@ const ViewerPage = () => {
         className={`w-full max-w-6xl mx-auto bg-black rounded-lg overflow-hidden shadow-2xl relative aspect-video mt-10 group ${!isHovering ? 'cursor-none' : ''}`}
       >
         {status.activeVideo && overlays.isBroadcastActive ? (
-          <video 
-            ref={videoRef} 
-            className="absolute inset-0 w-full h-full object-cover z-0" 
-            playsInline 
-            muted={isMuted}
-          />
+          <>
+            <video 
+              ref={video1Ref} 
+              className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+              playsInline 
+              muted={isMuted}
+            />
+            <video 
+              ref={video2Ref} 
+              className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+              playsInline 
+              muted={isMuted}
+            />
+          </>
         ) : (
           <div className="absolute inset-0 bg-[#66DE93] z-0 flex items-center justify-center">
             <span className="text-black font-bold text-xl uppercase tracking-widest opacity-30">
