@@ -274,10 +274,10 @@ const ViewerPage = () => {
         {isMuted && status.activeVideo && overlays.isBroadcastActive && (
           <button 
             onClick={handlePlayUnmute}
-            className="absolute inset-0 w-full h-full bg-black/60 flex flex-col items-center justify-center gap-3 text-white font-bold text-sm transition-all hover:bg-black/75 z-10 cursor-pointer"
+            className="absolute inset-0 w-full h-full bg-black/60 flex flex-col items-center justify-center gap-[2vh] text-white font-bold text-[3vh] transition-all hover:bg-black/75 z-10 cursor-pointer"
           >
-            <div className="w-16 h-16 rounded-full bg-pink-600 flex items-center justify-center shadow-2xl">
-              <Play className="w-8 h-8 fill-white text-white ml-1.5" />
+            <div className="w-[12vh] h-[12vh] rounded-full bg-pink-600 flex items-center justify-center shadow-2xl">
+              <Play className="w-[6vh] h-[6vh] fill-white text-white ml-[1vh]" />
             </div>
             <span>Click to Unmute / Play Linear Stream</span>
           </button>
