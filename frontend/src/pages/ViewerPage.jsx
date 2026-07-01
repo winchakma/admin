@@ -127,8 +127,15 @@ const ViewerPage = () => {
   // Dual Video Playback & Sync Engine
   useEffect(() => {
     if (!status.activeVideo || !status.isPlaying || !overlays.isBroadcastActive) {
-      if (video1Ref.current) video1Ref.current.src = '';
-      if (video2Ref.current) video2Ref.current.src = '';
+      if (video1Ref.current) {
+        video1Ref.current.removeAttribute('src');
+        video1Ref.current.load();
+      }
+      if (video2Ref.current) {
+        video2Ref.current.removeAttribute('src');
+        video2Ref.current.load();
+      }
+      currentVideoIdRef.current = null;
       return;
     }
 
@@ -141,15 +148,29 @@ const ViewerPage = () => {
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
 
+    const loadAndPlayVideo = (element, url, offset) => {
+      element.src = url;
+      element.load();
+      element.onloadedmetadata = () => {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log("Autoplay blocked:", e));
+      };
+      if (element.readyState >= 1) {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log("Autoplay blocked:", e));
+      }
+    };
+
     // 1. Transition Check (Video Switched)
-    // Use the unique video ID to check for transitions, avoiding URL mismatch blinking bugs
     if (currentVideoIdRef.current !== status.activeVideo.id) {
       currentVideoIdRef.current = status.activeVideo.id;
       
       // Is the next video preloaded in the background player?
-      if (nextEl.src && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
+      if (nextEl.hasAttribute('src') && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
         // PERFECT! It's preloaded. Swap instantly!
-        nextEl.currentTime = status.activeVideo.offset || 0;
+        if (nextEl.readyState >= 1) {
+          nextEl.currentTime = status.activeVideo.offset || 0;
+        }
         nextEl.play().catch(e => console.log("Autoplay blocked:", e));
         setActivePlayer(activePlayer === 1 ? 2 : 1);
         
@@ -162,9 +183,7 @@ const ViewerPage = () => {
         }
       } else {
         // Fallback: Hard switch if preload failed or just started
-        currentEl.src = videoUrl;
-        currentEl.currentTime = status.activeVideo.offset || 0;
-        currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+        loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
         
         // Set up preload
         if (status.nextVideo) {
@@ -174,28 +193,28 @@ const ViewerPage = () => {
           nextEl.load();
         }
       }
-    } else if (!currentEl.src) {
-      // First ever load
-      currentEl.src = videoUrl;
-      currentEl.currentTime = status.activeVideo.offset || 0;
-      currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+    } else if (!currentEl.hasAttribute('src')) {
+      // First ever load after halt/resume
       currentVideoIdRef.current = status.activeVideo.id;
+      loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
     } else {
       // 2. Sync Enforcement (Runs every second because status.activeVideo is a new object reference)
-      const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
-      // Stricter sync tolerance (2 seconds max drift before correction)
-      if (currentDiff > 2) {
-        currentEl.currentTime = status.activeVideo.offset;
-      }
-      if (currentEl.paused && !isPaused) {
-        currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+      if (currentEl.readyState >= 1) {
+        const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+        // Stricter sync tolerance (2 seconds max drift before correction)
+        if (currentDiff > 2) {
+          currentEl.currentTime = status.activeVideo.offset;
+        }
+        if (currentEl.paused && !isPaused) {
+          currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+        }
       }
 
       // Keep preload updated just in case admin changes the queue
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
         const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-        if (!nextEl.src || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
+        if (!nextEl.hasAttribute('src') || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
           nextEl.src = nextUrl;
           nextEl.load();
         }

@@ -127,8 +127,15 @@ function AdminPanel() {
   
   const setupDualPlayer = (video1Ref, video2Ref, activePlayer, setActivePlayer) => {
     if (!status.activeVideo) {
-      if (video1Ref.current) video1Ref.current.src = '';
-      if (video2Ref.current) video2Ref.current.src = '';
+      if (video1Ref.current) {
+        video1Ref.current.removeAttribute('src');
+        video1Ref.current.load();
+      }
+      if (video2Ref.current) {
+        video2Ref.current.removeAttribute('src');
+        video2Ref.current.load();
+      }
+      currentVideoIdRef.current = null;
       return;
     }
 
@@ -141,11 +148,26 @@ function AdminPanel() {
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
 
+    const loadAndPlayVideo = (element, url, offset) => {
+      element.src = url;
+      element.load();
+      element.onloadedmetadata = () => {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log(e));
+      };
+      if (element.readyState >= 1) {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log(e));
+      }
+    };
+
     if (currentVideoIdRef.current !== status.activeVideo.id) {
       currentVideoIdRef.current = status.activeVideo.id;
       
-      if (nextEl.src && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
-        nextEl.currentTime = status.activeVideo.offset || 0;
+      if (nextEl.hasAttribute('src') && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
+        if (nextEl.readyState >= 1) {
+          nextEl.currentTime = status.activeVideo.offset || 0;
+        }
         nextEl.play().catch(e => console.log(e));
         setActivePlayer(activePlayer === 1 ? 2 : 1);
         if (status.nextVideo) {
@@ -155,9 +177,7 @@ function AdminPanel() {
           currentEl.load();
         }
       } else {
-        currentEl.src = videoUrl;
-        currentEl.currentTime = status.activeVideo.offset || 0;
-        currentEl.play().catch(e => console.log(e));
+        loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
         if (status.nextVideo) {
           const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
           const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
@@ -165,23 +185,24 @@ function AdminPanel() {
           nextEl.load();
         }
       }
-    } else if (!currentEl.src) {
-      currentEl.src = videoUrl;
-      currentEl.currentTime = status.activeVideo.offset || 0;
-      currentEl.play().catch(e => console.log(e));
+    } else if (!currentEl.hasAttribute('src')) {
       currentVideoIdRef.current = status.activeVideo.id;
+      loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
     } else {
-      const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
-      if (currentDiff > 2) {
-        currentEl.currentTime = status.activeVideo.offset;
+      if (currentEl.readyState >= 1) {
+        const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+        if (currentDiff > 2) {
+          currentEl.currentTime = status.activeVideo.offset;
+        }
+        if (currentEl.paused) {
+          currentEl.play().catch(e => console.log(e));
+        }
       }
-      if (currentEl.paused) {
-        currentEl.play().catch(e => console.log(e));
-      }
+      
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
         const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-        if (!nextEl.src || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
+        if (!nextEl.hasAttribute('src') || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
           nextEl.src = nextUrl;
           nextEl.load();
         }
