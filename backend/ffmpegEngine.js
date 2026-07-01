@@ -50,14 +50,8 @@ const startFfmpegStream = (inputVideoPath) => {
       '-stream_loop -1', // Loop the input video endlessly for a 24/7 feel
       '-re' // Read input at native frame rate
     ])
-    .complexFilter([
-      // Basic example: Burn ticker1 text onto the video
-      `drawtext=fontfile='${escapedFontPath}':textfile='${escapedTicker1}':reload=1:fontcolor=white:fontsize=32:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=h-50`
-    ])
     .outputOptions([
-      '-c:v libx264',
-      '-preset veryfast',
-      '-crf 28',
+      '-c:v copy',
       '-c:a aac',
       '-ar 44100',
       '-f hls',
