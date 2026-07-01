@@ -288,7 +288,7 @@ const ViewerPage = () => {
           <>
             {/* Site Logo */}
             {overlays.logoActive && (
-              <div className="absolute top-4 left-4 bg-[#111111] border border-gray-800 text-white font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20 overflow-hidden">
+              <div className="absolute top-[2vh] left-[2vh] bg-[#111111] border border-gray-800 text-white font-extrabold text-[2vh] w-[10vh] h-[10vh] rounded-[1.5vh] flex items-center justify-center shadow-lg z-20 overflow-hidden">
                 {overlays.logoImagePath ? (
                   <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="max-w-full max-h-full object-contain" />
                 ) : (
@@ -300,11 +300,11 @@ const ViewerPage = () => {
 
 
             {/* Tickers, OTS & Time/Date Aligned Bottom Rows */}
-            <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 z-20 text-[2.5vw] md:text-[1.8vw] lg:text-[1.2vw] xl:text-[1vw] font-bold text-white select-none drop-shadow-lg pointer-events-none">
+            <div className="absolute bottom-[2vh] left-[2vh] right-[2vh] flex flex-col gap-[0.5vh] z-20 font-bold text-white select-none drop-shadow-lg pointer-events-none">
               
               {/* OTS graphic overlay (Dynamically stacked above tickers) */}
               {overlays.otsActive && overlays.otsImagePath && (
-                <div className="self-end w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg shadow-lg mb-2 pointer-events-auto">
+                <div className="self-end w-[15vh] h-[15vh] bg-[#111111] border border-gray-800 flex items-center justify-center p-[1vh] rounded-[1vh] shadow-lg mb-[1vh] pointer-events-auto">
                   <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                 </div>
               )}
@@ -314,7 +314,7 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                   {/* Ticker 1 Title */}
                   {overlays.ticker1Active && (
-                    <div className="bg-[#111111] border-r-2 border-pink-600 px-3 md:px-5 py-2 md:py-3 rounded-l-lg w-auto max-w-[30%] md:max-w-[20%] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] md:text-sm font-black font-sans shadow-inner">
+                    <div className="bg-[#111111] border-r-[0.3vh] border-pink-600 px-[1.5vw] py-[1vh] rounded-l-[1vh] w-auto max-w-[20vw] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden text-ellipsis whitespace-nowrap text-[2vh] font-black font-sans shadow-inner">
                       <span className="truncate">
                         {overlays.ticker1Title || 'Headline News 1'}
                       </span>
@@ -322,8 +322,8 @@ const ViewerPage = () => {
                   )}
                   {/* Ticker 1 Text */}
                   {overlays.ticker1Active && (
-                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-4 py-2 md:py-3 flex items-center overflow-hidden">
-                      <marquee className="font-normal flex-1 text-gray-100" scrollamount="4">{overlays.ticker1Text}</marquee>
+                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-[1vw] py-[1vh] flex items-center overflow-hidden">
+                      <marquee className="font-normal flex-1 text-gray-100 text-[2.5vh]" scrollamount="4">{overlays.ticker1Text}</marquee>
                     </div>
                   )}
                   {/* (Time bug moved to unified rotating bug below) */}
@@ -335,7 +335,7 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                   {/* Ticker 2 Title */}
                   {overlays.ticker2Active && (
-                    <div className="bg-[#111111] border-r-2 border-blue-600 px-3 md:px-5 py-2 md:py-3 rounded-l-lg w-auto max-w-[30%] md:max-w-[20%] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] md:text-sm font-black font-sans shadow-inner">
+                    <div className="bg-[#111111] border-r-[0.3vh] border-blue-600 px-[1.5vw] py-[1vh] rounded-l-[1vh] w-auto max-w-[20vw] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden text-ellipsis whitespace-nowrap text-[2vh] font-black font-sans shadow-inner">
                       <span className="truncate">
                         {overlays.ticker2Title || 'Headline News 2'}
                       </span>
@@ -343,13 +343,13 @@ const ViewerPage = () => {
                   )}
                   {/* Ticker 2 Text */}
                   {overlays.ticker2Active && (
-                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-4 py-2 md:py-3 flex items-center overflow-hidden">
-                      <marquee className="font-normal flex-1 text-gray-100" scrollamount="5">{overlays.ticker2Text}</marquee>
+                    <div className="flex-1 bg-gradient-to-r from-[#1a1a1a] to-[#2a2a2a] border-y border-gray-800 px-[1vw] py-[1vh] flex items-center overflow-hidden">
+                      <marquee className="font-normal flex-1 text-gray-100 text-[2.5vh]" scrollamount="5">{overlays.ticker2Text}</marquee>
                     </div>
                   )}
                   {/* Unified Rotating Time/Date Bug */}
                   {(overlays.showDate || overlays.showTime) && (
-                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-2 md:px-4 py-2 md:py-3 w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded-lg' : 'rounded-r-lg'}`}>
+                    <div className={`bg-black/90 backdrop-blur border border-gray-800 px-[1vw] py-[1vh] w-[12vw] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 text-[2vh] transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded-[1vh]' : 'rounded-r-[1vh]'}`}>
                       {rotationIndex === 0 && <span className="animate-pulse">{currentTimeStr}</span>}
                       {rotationIndex === 1 && <span>{currentDayStr}</span>}
                       {rotationIndex === 2 && <span>{currentDateStr}</span>}
