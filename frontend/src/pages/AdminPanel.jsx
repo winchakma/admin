@@ -101,11 +101,14 @@ function AdminPanel() {
       // Force Bangladesh Standard Time (UTC+6)
       const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
       
-      // Format time as hh:mm:ss
-      const hours = d.getHours().toString().padStart(2, '0');
+      let h = d.getHours();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12;
+      h = h ? h : 12; // the hour '0' should be '12'
+      const hours = h.toString().padStart(2, '0');
       const minutes = d.getMinutes().toString().padStart(2, '0');
       const seconds = d.getSeconds().toString().padStart(2, '0');
-      setCurrentTimeStr(`${hours}:${minutes}:${seconds}`);
+      setCurrentTimeStr(`${hours}:${minutes}:${seconds} ${ampm}`);
 
       // Format date as DD/MM/YYYY
       const day = d.getDate().toString().padStart(2, '0');
