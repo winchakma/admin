@@ -271,8 +271,8 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                   {/* Ticker 1 Title */}
                   {overlays.ticker1Active && (
-                    <div className="bg-[#111111] border-r-2 border-pink-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 text-center flex items-center justify-center uppercase tracking-wider text-pink-500 whitespace-nowrap overflow-hidden text-ellipsis">
-                      {overlays.ticker1Title || 'Headline News 1'}
+                    <div className="bg-[#111111] border-r-2 border-pink-600 px-2 md:px-3 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 flex items-center justify-center uppercase tracking-wider text-pink-500 overflow-hidden">
+                      <span className="truncate w-full text-center">{overlays.ticker1Title || 'Headline News 1'}</span>
                     </div>
                   )}
                   {/* Ticker 1 Text */}
@@ -290,8 +290,8 @@ const ViewerPage = () => {
                 <div className={`flex w-full shadow-2xl ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                   {/* Ticker 2 Title */}
                   {overlays.ticker2Active && (
-                    <div className="bg-[#111111] border-r-2 border-blue-600 px-4 md:px-6 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 text-center flex items-center justify-center uppercase tracking-wider text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis">
-                      {overlays.ticker2Title || 'Headline News 2'}
+                    <div className="bg-[#111111] border-r-2 border-blue-600 px-2 md:px-3 py-2 md:py-3 rounded-l-lg w-[25%] sm:w-[20%] md:w-[15%] lg:w-[12%] shrink-0 flex items-center justify-center uppercase tracking-wider text-blue-500 overflow-hidden">
+                      <span className="truncate w-full text-center">{overlays.ticker2Title || 'Headline News 2'}</span>
                     </div>
                   )}
                   {/* Ticker 2 Text */}
