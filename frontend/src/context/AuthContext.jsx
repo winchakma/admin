@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
+  const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
 
   useEffect(() => {
     const fetchUser = async () => {

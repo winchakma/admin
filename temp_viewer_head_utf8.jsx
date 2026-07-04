@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
 import Hls from 'hls.js';
 import { Play, Pause, Volume2, VolumeX, Maximize, Settings, CircleDot } from 'lucide-react';
 
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
 
 const ViewerPage = () => {
   const [isMuted, setIsMuted] = useState(true);
@@ -14,8 +14,9 @@ const ViewerPage = () => {
   const hideControlsTimeoutRef = useRef(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState('Auto');
-  const videoRef = useRef(null);
-  const hlsRef = useRef(null);
+  const video1Ref = useRef(null);
+  const video2Ref = useRef(null);
+  const [activePlayer, setActivePlayer] = useState(1);
   const wrapperRef = useRef(null);
   const socketRef = useRef(null);
   const currentVideoIdRef = useRef(null);
@@ -123,82 +124,112 @@ const ViewerPage = () => {
     return () => s.disconnect();
   }, []);
 
-useEffect(() => {
-    if (!status.activeVideo || !overlays.isBroadcastActive) {
-      if (videoRef.current) {
-        videoRef.current.removeAttribute('src');
-        videoRef.current.load();
+  // Dual Video Playback & Sync Engine
+  useEffect(() => {
+    if (!status.activeVideo || !status.isPlaying || !overlays.isBroadcastActive) {
+      if (video1Ref.current) {
+        video1Ref.current.removeAttribute('src');
+        video1Ref.current.load();
       }
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
+      if (video2Ref.current) {
+        video2Ref.current.removeAttribute('src');
+        video2Ref.current.load();
       }
+      currentVideoIdRef.current = null;
       return;
     }
 
-    if (Hls.isSupported() && videoRef.current) {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-      }
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90
-      });
-      hlsRef.current = hls;
-      
-      const streamUrl = `${SOCKET_URL}/stream/live.m3u8`;
-      
-      hls.attachMedia(videoRef.current);
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        hls.loadSource(streamUrl);
-      });
-      
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (!isPaused && !isMuted) {
-          videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
-        }
-      });
-      
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              hls.destroy();
-              break;
-          }
-        }
-      });
-    } else if (videoRef.current && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-      videoRef.current.src = `${SOCKET_URL}/stream/live.m3u8`;
-      videoRef.current.addEventListener('loadedmetadata', () => {
-        if (!isPaused && !isMuted) {
-          videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
-        }
-      });
-    }
-    
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
+    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+    const nextEl = activePlayer === 1 ? video2Ref.current : video1Ref.current;
+    if (!currentEl || !nextEl) return;
+
+    const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
+    const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
+      ? normalizedPath
+      : `${SOCKET_URL}/${normalizedPath}`;
+
+    const loadAndPlayVideo = (element, url, offset) => {
+      element.src = url;
+      element.load();
+      element.onloadedmetadata = () => {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log("Autoplay blocked:", e));
+      };
+      if (element.readyState >= 1) {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log("Autoplay blocked:", e));
       }
     };
-  }, [status.activeVideo, overlays.isBroadcastActive]);
+
+    // 1. Transition Check (Video Switched)
+    if (currentVideoIdRef.current !== status.activeVideo.id) {
+      currentVideoIdRef.current = status.activeVideo.id;
+      
+      // Is the next video preloaded in the background player?
+      if (nextEl.hasAttribute('src') && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
+        // PERFECT! It's preloaded. Swap instantly!
+        if (nextEl.readyState >= 1) {
+          nextEl.currentTime = status.activeVideo.offset || 0;
+        }
+        nextEl.play().catch(e => console.log("Autoplay blocked:", e));
+        setActivePlayer(activePlayer === 1 ? 2 : 1);
+        
+        // Now preload the NEW nextVideo in the background
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          currentEl.src = nextUrl;
+          currentEl.load();
+        }
+      } else {
+        // Fallback: Hard switch if preload failed or just started
+        loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
+        
+        // Set up preload
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          nextEl.src = nextUrl;
+          nextEl.load();
+        }
+      }
+    } else if (!currentEl.hasAttribute('src')) {
+      // First ever load after halt/resume
+      currentVideoIdRef.current = status.activeVideo.id;
+      loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
+    } else {
+      // 2. Sync Enforcement (Runs every second because status.activeVideo is a new object reference)
+      if (currentEl.readyState >= 1) {
+        const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+        // Stricter sync tolerance (2 seconds max drift before correction)
+        if (currentDiff > 2) {
+          currentEl.currentTime = status.activeVideo.offset;
+        }
+        if (currentEl.paused && !isPaused) {
+          currentEl.play().catch(e => console.log("Autoplay blocked:", e));
+        }
+      }
+
+      // Keep preload updated just in case admin changes the queue
+      if (status.nextVideo) {
+        const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        if (!nextEl.hasAttribute('src') || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
+          nextEl.src = nextUrl;
+          nextEl.load();
+        }
+      }
+    }
+  }, [status.activeVideo, overlays.isBroadcastActive]); // IMPORTANT: Depends on the whole activeVideo object to trigger every second!
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
     setIsPaused(false);
-    if (videoRef.current) {
-      videoRef.current.play().catch(err => console.log(err));
-      videoRef.current.muted = false;
-      videoRef.current.volume = volume;
+    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+    if (currentEl) {
+      currentEl.play().catch(err => console.log(err));
+      currentEl.muted = false;
+      currentEl.volume = volume;
     }
   };
 
@@ -218,8 +249,14 @@ useEffect(() => {
       >
         <div className={`absolute inset-0 w-full h-full ${status.activeVideo && overlays.isBroadcastActive ? 'block' : 'hidden'}`}>
           <video 
-            ref={videoRef} 
-            className="absolute inset-0 w-full h-full object-cover z-0 opacity-100 block" 
+            ref={video1Ref} 
+            className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+            playsInline 
+            muted={isMuted}
+          />
+          <video 
+            ref={video2Ref} 
+            className={`absolute inset-0 w-full h-full object-cover z-0 ${activePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
             playsInline 
             muted={isMuted}
           />
@@ -330,7 +367,7 @@ useEffect(() => {
                 {/* Left Controls */}
                 <div className="flex items-center space-x-4">
                   <button onClick={() => {
-                    const currentEl = videoRef.current;
+                    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
                     if (currentEl) {
                       if (isPaused) {
                         currentEl.play();
@@ -346,7 +383,7 @@ useEffect(() => {
                   
                   <div className="flex items-center space-x-2 group/volume relative">
                     <button onClick={() => {
-                      const currentEl = videoRef.current;
+                      const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
                       if (currentEl) {
                         if (isMuted) {
                           currentEl.muted = false;
@@ -368,7 +405,7 @@ useEffect(() => {
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setVolume(val);
-                        const currentEl = videoRef.current;
+                        const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
                         if (currentEl) {
                           currentEl.volume = val;
                           currentEl.muted = val === 0;
@@ -381,7 +418,7 @@ useEffect(() => {
 
                   <button 
                     onClick={() => {
-                      const currentEl = videoRef.current;
+                      const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
                       if (currentEl && status.activeVideo) {
                         currentEl.currentTime = status.activeVideo.offset;
                         currentEl.play().catch(e => console.log(e));

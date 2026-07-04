@@ -10,6 +10,13 @@ const AdStateSchema = new mongoose.Schema({
   totalAdTimeOffset: {
     type: Number,
     default: 0
+  },
+  azaanToggles: {
+    Fajr: { type: Boolean, default: false },
+    Zohr: { type: Boolean, default: false },
+    Asr: { type: Boolean, default: false },
+    Maghrib: { type: Boolean, default: false },
+    Isha: { type: Boolean, default: false }
   }
 }, {
   timestamps: true

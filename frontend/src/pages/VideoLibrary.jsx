@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Home, Folder, Settings, Search, Film, Music, Rss, ArrowLeft, Play, Clock, MoreVertical, XCircle, ChevronDown, Upload } from 'lucide-react';
 import { io } from 'socket.io-client';
+import { uploadFileInChunks } from '../utils/upload';
 
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
+const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
 
 const apiFetch = async (url, options = {}) => {
   const token = localStorage.getItem('token');
@@ -28,9 +29,16 @@ export default function VideoLibrary() {
   const [libraryAssets, setLibraryAssets] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeMenu, setActiveMenu] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const socketRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('News');
+  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     const s = io(SOCKET_URL, { reconnectionAttempts: 5, timeout: 5000 });
@@ -59,29 +67,52 @@ export default function VideoLibrary() {
     }
   };
 
-  const handleFileUpload = async (e) => {
+  const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      setSelectedFile(file);
+      if (!uploadTitle) setUploadTitle(file.name);
+    }
+  };
+
+  const submitUpload = async () => {
+    if (!selectedFile) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append('video', file);
-    formData.append('title', file.name);
+    setUploadProgress(0);
 
     try {
+      // 1. Upload in chunks
+      const uploadResult = await uploadFileInChunks(selectedFile, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      if (!uploadResult || !uploadResult.completed) {
+        throw new Error('Chunk upload failed to complete');
+      }
+
+      // 2. Register to library using the returned file path
+      const formData = new FormData();
+      formData.append('title', uploadTitle || selectedFile.name);
+      formData.append('category', uploadCategory);
+      formData.append('filePath', uploadResult.filePath);
+      formData.append('duration', uploadResult.duration);
+
       await apiFetch(`${SOCKET_URL}/api/library/upload`, {
         method: 'POST',
         body: formData
       });
+      
       await fetchLibrary(); // Refresh library after upload
+      setShowUploadModal(false);
+      setSelectedFile(null);
+      setUploadTitle('');
     } catch (err) {
       console.error('Upload failed', err);
       alert('Failed to upload video');
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setUploadProgress(0);
     }
   };
 
@@ -166,18 +197,13 @@ export default function VideoLibrary() {
             <p className="text-sm text-gray-500 mt-1 font-bold">Manage and organize your broadcast assets</p>
           </div>
           <div className="flex gap-4">
-            <label className={`px-5 py-2.5 rounded-lg text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2 cursor-pointer ${isUploading ? 'bg-gray-600' : 'bg-green-600 hover:bg-green-700'}`}>
+            <button 
+              onClick={() => setShowUploadModal(true)}
+              className="px-5 py-2.5 rounded-lg text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2 cursor-pointer bg-green-600 hover:bg-green-700"
+            >
               <Upload className="w-4 h-4" />
-              {isUploading ? 'Uploading...' : 'Upload Video'}
-              <input 
-                type="file" 
-                accept="video/*" 
-                onChange={handleFileUpload} 
-                disabled={isUploading}
-                ref={fileInputRef}
-                className="hidden" 
-              />
-            </label>
+              Upload Video
+            </button>
             <Link 
               to="/admin" 
               className="px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2"
@@ -288,6 +314,83 @@ export default function VideoLibrary() {
 
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#1a1a1a] border border-gray-700 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
+            <button 
+              onClick={() => !isUploading && setShowUploadModal(false)}
+              className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+              disabled={isUploading}
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+
+            <h3 className="text-xl font-black text-white mb-6 tracking-wide">UPLOAD VIDEO</h3>
+
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Video File</label>
+                <div className="relative">
+                  <input 
+                    type="file" 
+                    accept="video/*,.mkv,.avi,.mov,.mp4,.webm,.wmv"
+                    onChange={handleFileSelect}
+                    className="w-full bg-[#111] border border-gray-700 text-gray-300 text-sm rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-l-lg file:border-0 file:text-sm file:font-bold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
+                    disabled={isUploading}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Title</label>
+                <input 
+                  type="text" 
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  placeholder="Enter video title"
+                  className="w-full bg-[#111] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500 transition-colors"
+                  disabled={isUploading}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Category</label>
+                <select 
+                  value={uploadCategory}
+                  onChange={(e) => setUploadCategory(e.target.value)}
+                  className="w-full bg-[#111] border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500 transition-colors appearance-none"
+                  disabled={isUploading}
+                >
+                  <option value="News">News</option>
+                  <option value="Music">Music</option>
+                  <option value="Movie">Movie</option>
+                </select>
+              </div>
+
+              <button
+                onClick={submitUpload}
+                disabled={!selectedFile || isUploading}
+                className={`mt-4 w-full py-3 rounded-lg font-bold text-white tracking-widest shadow-lg flex items-center justify-center gap-2 transition-all ${
+                  !selectedFile || isUploading 
+                    ? 'bg-gray-600 cursor-not-allowed opacity-50' 
+                    : 'bg-green-600 hover:bg-green-500'
+                }`}
+              >
+                {isUploading ? (
+                  `UPLOADING... ${uploadProgress}%`
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    CONFIRM & UPLOAD
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

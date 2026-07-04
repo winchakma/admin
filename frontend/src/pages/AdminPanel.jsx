@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import io from 'socket.io-client';
 import Hls from 'hls.js';
+import { uploadFileInChunks } from '../utils/upload';
 import { 
   Upload, 
   Settings, 
@@ -17,7 +18,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://admin-spml.onrender.com';
+const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
 
 function AdminPanel() {
   const { token, user, logout } = useContext(AuthContext);
@@ -75,6 +76,9 @@ function AdminPanel() {
   const [uploadCategory, setUploadCategory] = useState('News');
   const [externalUrl, setExternalUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingOts, setIsUploadingOts] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [currentDateStr, setCurrentDateStr] = useState('');
   const [currentDayStr, setCurrentDayStr] = useState('');
@@ -94,7 +98,45 @@ function AdminPanel() {
   const [ads, setAds] = useState([]);
   const [adTitle, setAdTitle] = useState('');
   const [isAdUploading, setIsAdUploading] = useState(false);
+  const [azaanToggles, setAzaanToggles] = useState({
+    Fajr: false, Zohr: false, Asr: false, Maghrib: false, Isha: false
+  });
+
+  const fetchAzaanStatus = async () => {
+    try {
+      const res = await apiFetch(`${SOCKET_URL}/api/admin/azaan/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setAzaanToggles(data);
+      }
+    } catch (err) {
+      console.warn('Could not fetch azaan status:', err);
+    }
+  };
+
+  const toggleAzaan = async (prayer, currentState) => {
+    try {
+      const newState = !currentState;
+      setAzaanToggles(prev => ({ ...prev, [prayer]: newState }));
+      await apiFetch(`${SOCKET_URL}/api/admin/azaan/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prayer, state: newState })
+      });
+    } catch (err) {
+      console.warn('Could not toggle azaan:', err);
+    }
+  };
   const [isPushingLive, setIsPushingLive] = useState(false);
+
+  const [siteSettings, setSiteSettings] = useState({
+    aboutUsText: '',
+    contactEmail: '',
+    contactPhone: '',
+    contactAddress: '',
+    newsPortalLink: '',
+    ePaperLink: ''
+  });
 
 
   // Live time and date updater
@@ -124,109 +166,98 @@ function AdminPanel() {
     return () => clearInterval(timer);
   }, []);
 
-  // Dual Video Engine logic inside a reusable function
+  const previewHlsRef = useRef(null);
+  const publicHlsRef = useRef(null);
   const currentVideoIdRef = useRef(null);
   
-  const setupDualPlayer = (video1Ref, video2Ref, activePlayer, setActivePlayer) => {
-    if (!status.activeVideo) {
-      if (video1Ref.current) {
-        video1Ref.current.removeAttribute('src');
-        video1Ref.current.load();
+  const setupHlsPlayer = (videoRef, hlsRefObj) => {
+    if (!status.activeVideo || !overlays.isBroadcastActive) {
+      if (videoRef.current) {
+        videoRef.current.removeAttribute('src');
+        videoRef.current.load();
       }
-      if (video2Ref.current) {
-        video2Ref.current.removeAttribute('src');
-        video2Ref.current.load();
+      if (hlsRefObj.current) {
+        hlsRefObj.current.destroy();
+        hlsRefObj.current = null;
       }
-      currentVideoIdRef.current = null;
       return;
     }
 
-    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
-    const nextEl = activePlayer === 1 ? video2Ref.current : video1Ref.current;
-    if (!currentEl || !nextEl) return;
-
-    const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
-    const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
-      ? normalizedPath
-      : `${SOCKET_URL}/${normalizedPath}`;
-
-    const loadAndPlayVideo = (element, url, offset) => {
-      element.src = url;
-      element.load();
-      element.onloadedmetadata = () => {
-        element.currentTime = offset || 0;
-        element.play().catch(e => console.log(e));
-      };
-      if (element.readyState >= 1) {
-        element.currentTime = offset || 0;
-        element.play().catch(e => console.log(e));
+    if (Hls.isSupported() && videoRef.current) {
+      if (hlsRefObj.current) {
+        hlsRefObj.current.destroy();
       }
-    };
-
-    if (currentVideoIdRef.current !== status.activeVideo.id) {
-      currentVideoIdRef.current = status.activeVideo.id;
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 90
+      });
+      hlsRefObj.current = hls;
       
-      if (nextEl.hasAttribute('src') && (nextEl.src.endsWith(videoUrl.split('?')[0]) || nextEl.src === videoUrl)) {
-        if (nextEl.readyState >= 1) {
-          nextEl.currentTime = status.activeVideo.offset || 0;
-        }
-        nextEl.play().catch(e => console.log(e));
-        setActivePlayer(activePlayer === 1 ? 2 : 1);
-        if (status.nextVideo) {
-          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-          currentEl.src = nextUrl;
-          currentEl.load();
-        }
-      } else {
-        loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
-        if (status.nextVideo) {
-          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-          nextEl.src = nextUrl;
-          nextEl.load();
-        }
-      }
-    } else if (!currentEl.hasAttribute('src')) {
-      currentVideoIdRef.current = status.activeVideo.id;
-      loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
-    } else {
-      if (currentEl.readyState >= 1) {
-        const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
-        if (currentDiff > 2) {
-          currentEl.currentTime = status.activeVideo.offset;
-        }
-        if (currentEl.paused) {
-          currentEl.play().catch(e => console.log(e));
-        }
-      }
+      const streamUrl = `${SOCKET_URL}/stream/live.m3u8`;
       
-      if (status.nextVideo) {
-        const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-        if (!nextEl.hasAttribute('src') || (!nextEl.src.endsWith(nextUrl.split('?')[0]) && nextEl.src !== nextUrl)) {
-          nextEl.src = nextUrl;
-          nextEl.load();
+      hls.attachMedia(videoRef.current);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        hls.loadSource(streamUrl);
+      });
+      
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (!status.isPaused) {
+          videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
         }
-      }
+      });
+      
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              hls.recoverMediaError();
+              break;
+            default:
+              hls.destroy();
+              break;
+          }
+        }
+      });
+    } else if (videoRef.current && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+      videoRef.current.src = `${SOCKET_URL}/stream/live.m3u8`;
+      videoRef.current.addEventListener('loadedmetadata', () => {
+        if (!status.isPaused) {
+          videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
+        }
+      });
     }
   };
 
   useEffect(() => {
     // Only setup the players that are currently mounted (depends on activeTab)
     if (activeTab === 'admin') {
-      setupDualPlayer(previewVideo1Ref, previewVideo2Ref, previewActivePlayer, setPreviewActivePlayer);
+      setupHlsPlayer(previewVideo1Ref, previewHlsRef);
     } else if (activeTab === 'public') {
-      setupDualPlayer(publicVideo1Ref, publicVideo2Ref, publicActivePlayer, setPublicActivePlayer);
+      setupHlsPlayer(publicVideo1Ref, publicHlsRef);
     }
-  }, [status.activeVideo, activeTab, previewActivePlayer, publicActivePlayer]);
+    
+    return () => {
+      if (previewHlsRef.current) {
+        previewHlsRef.current.destroy();
+        previewHlsRef.current = null;
+      }
+      if (publicHlsRef.current) {
+        publicHlsRef.current.destroy();
+        publicHlsRef.current = null;
+      }
+    }
+  }, [status.activeVideo, activeTab, overlays.isBroadcastActive]);
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
-    const prev1 = previewActivePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current;
+    const prev1 = previewVideo1Ref.current;
     if (prev1) prev1.play().catch(e => console.log(e));
     
-    const pub1 = publicActivePlayer === 1 ? publicVideo1Ref.current : publicVideo2Ref.current;
+    const pub1 = publicVideo1Ref.current;
     if (pub1) pub1.play().catch(e => console.log(e));
   };
 
@@ -259,8 +290,16 @@ function AdminPanel() {
     fetchLibrary();
     fetchAds();
     fetchChannels();
-    
-    return () => s.disconnect();
+    fetchAzaanStatus();
+
+    fetch(`${SOCKET_URL}/api/settings`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setSiteSettings(data);
+        }
+      })
+      .catch(err => console.warn('Could not fetch settings'));
   }, []);
 
   const fetchPlaylist = async () => {
@@ -308,11 +347,16 @@ function AdminPanel() {
     if (!file) return;
 
     setIsAdUploading(true);
-    const formData = new FormData();
-    formData.append('video', file);
-    formData.append('title', adTitle || file.name);
-
+    
     try {
+      const uploadResult = await uploadFileInChunks(file);
+      if (!uploadResult || !uploadResult.completed) throw new Error('Chunk upload failed');
+
+      const formData = new FormData();
+      formData.append('title', adTitle || file.name);
+      formData.append('filePath', uploadResult.filePath);
+      formData.append('duration', uploadResult.duration);
+
       const res = await apiFetch(`${SOCKET_URL}/api/ads/upload`, {
         method: 'POST',
         body: formData
@@ -395,12 +439,16 @@ function AdminPanel() {
     if (!file || isSubmitting) return;
     setIsSubmitting(true);
 
-    const formData = new FormData();
-    formData.append('video', file);
-    formData.append('title', uploadTitle || file.name);
-    formData.append('category', uploadCategory);
-
     try {
+      const uploadResult = await uploadFileInChunks(file);
+      if (!uploadResult || !uploadResult.completed) throw new Error('Chunk upload failed');
+
+      const formData = new FormData();
+      formData.append('title', uploadTitle || file.name);
+      formData.append('category', uploadCategory);
+      formData.append('filePath', uploadResult.filePath);
+      formData.append('duration', uploadResult.duration);
+
       const res = await apiFetch(`${SOCKET_URL}/api/playlist/upload`, {
         method: 'POST',
         body: formData
@@ -458,42 +506,50 @@ function AdminPanel() {
 
   const handleOtsUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || isUploadingOts) return;
 
+    setIsUploadingOts(true);
     const formData = new FormData();
     formData.append('image', file);
 
-    // Note: Do not update React state instantly with base64, as it breaks the background sync if the image is too large.
-    // Instead, rely purely on the socket event to pull down the final URL after upload.
-
     try {
-      await apiFetch(`${SOCKET_URL}/api/overlays/upload-ots`, {
+      const res = await apiFetch(`${SOCKET_URL}/api/overlays/upload-ots`, {
         method: 'POST',
         body: formData
       });
+      if (!res.ok) throw new Error('Upload failed');
+      const updatedConfig = await res.json();
+      setOverlays(prev => ({ ...prev, ...updatedConfig }));
     } catch (err) {
-      console.warn('OTS Image upload failed');
+      console.warn('OTS Image upload failed', err);
+      alert('Failed to upload OTS image.');
     } finally {
-      // Reset input value to allow selecting same file again
+      setIsUploadingOts(false);
       e.target.value = '';
     }
   };
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || isUploadingLogo) return;
 
+    setIsUploadingLogo(true);
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      await apiFetch(`${SOCKET_URL}/api/overlays/upload-logo`, {
+      const res = await apiFetch(`${SOCKET_URL}/api/overlays/upload-logo`, {
         method: 'POST',
         body: formData
       });
+      if (!res.ok) throw new Error('Upload failed');
+      const updatedConfig = await res.json();
+      setOverlays(prev => ({ ...prev, ...updatedConfig }));
     } catch (err) {
-      console.warn('Logo upload failed');
+      console.warn('Logo upload failed', err);
+      alert('Failed to upload logo image.');
     } finally {
+      setIsUploadingLogo(false);
       e.target.value = '';
     }
   };
@@ -611,13 +667,7 @@ function AdminPanel() {
                       <>
                         <video 
                           ref={previewVideo1Ref} 
-                          className={`absolute inset-0 w-full h-full object-cover z-0 ${previewActivePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
-                          playsInline 
-                          muted={isMuted}
-                        />
-                        <video 
-                          ref={previewVideo2Ref} 
-                          className={`absolute inset-0 w-full h-full object-cover z-0 ${previewActivePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                          className="absolute inset-0 w-full h-full object-contain z-0 opacity-100 block" 
                           playsInline 
                           muted={isMuted}
                         />
@@ -661,50 +711,54 @@ function AdminPanel() {
                       </div>
                     )}
 
-                    {/* Row 1 (Ticker 1) */}
-                    {overlays.ticker1Active && (
+                    {/* Row 1 (Ticker 1 & Date/Day) */}
+                    {(overlays.ticker1Active || overlays.showDate) && (
                       <div className={`flex w-full shadow-lg ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                         {/* Ticker 1 Title */}
                         {overlays.ticker1Active && (
-                          <div className="bg-white border-r border-gray-300 px-2 sm:px-4 py-1 rounded-l w-auto max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
-                            <span className="truncate">
+                          <div className="bg-white border-r border-gray-300 px-3 py-0.5 rounded-l max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden whitespace-nowrap font-bold">
+                            <span className="text-[10px] sm:text-xs truncate leading-tight">
                               {overlays.ticker1Title}
                             </span>
                           </div>
                         )}
                         {/* Ticker 1 Text */}
                         {overlays.ticker1Active && (
-                          <div className="flex-1 bg-black border-y border-gray-800 px-2 py-1 flex items-center overflow-hidden">
-                            <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
+                          <div className="flex-1 bg-black border-y border-gray-800 px-2 py-0.5 flex items-center overflow-hidden">
+                            <marquee className="font-normal flex-1 text-white leading-tight" scrollamount="2">{overlays.ticker1Text}</marquee>
                           </div>
                         )}
-                        {/* (Time bug moved to unified rotating bug below) */}
+                        {/* Date/Day Bug */}
+                        {overlays.showDate && (
+                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-1 sm:px-2 py-0.5 w-[20%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker1Active ? 'rounded' : 'rounded-r'}`}>
+                            {rotationIndex === 0 && <span>{currentDayStr || 'Day'}</span>}
+                            {rotationIndex === 1 && <span>{currentDateStr || 'Date'}</span>}
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Row 2 (Ticker 2 & Unified Rotating Bug) */}
-                    {(overlays.ticker2Active || overlays.showDate || overlays.showTime) && (
+                    {/* Row 2 (Ticker 2 & Time) */}
+                    {(overlays.ticker2Active || overlays.showTime) && (
                       <div className={`flex w-full shadow-lg ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                         {/* Ticker 2 Title */}
                         {overlays.ticker2Active && (
-                          <div className="bg-white border-r border-gray-300 px-2 sm:px-4 py-1 rounded-l w-auto max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
-                            <span className="truncate">
+                          <div className="bg-white border-r border-gray-300 px-3 py-0.5 rounded-l max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden whitespace-nowrap font-bold">
+                            <span className="text-[10px] sm:text-xs truncate leading-tight">
                               {overlays.ticker2Title}
                             </span>
                           </div>
                         )}
                         {/* Ticker 2 Text */}
                         {overlays.ticker2Active && (
-                          <div className="flex-1 bg-black border-y border-gray-800 px-2 py-1 flex items-center overflow-hidden">
-                            <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                          <div className="flex-1 bg-black border-y border-gray-800 px-2 py-0.5 flex items-center overflow-hidden">
+                            <marquee className="font-normal flex-1 text-white leading-tight" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                           </div>
                         )}
-                        {/* Unified Rotating Time/Date Bug */}
-                        {(overlays.showDate || overlays.showTime) && (
-                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-1 sm:px-2 py-1 w-[22%] sm:w-[18%] md:w-[15%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
-                            {rotationIndex === 0 && <span className="animate-pulse">{currentTimeStr || 'Time'}</span>}
-                            {rotationIndex === 1 && <span>{currentDayStr || 'Day'}</span>}
-                            {rotationIndex === 2 && <span>{currentDateStr || 'Date'}</span>}
+                        {/* Time Bug */}
+                        {overlays.showTime && (
+                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-1 sm:px-2 py-0.5 w-[20%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
+                            <span>{currentTimeStr || 'Time'}</span>
                           </div>
                         )}
                       </div>
@@ -719,13 +773,13 @@ function AdminPanel() {
                     <input 
                       type="text" 
                       readOnly
-                      value={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/stream/live.m3u8`}
+                      value={`http://${window.location.hostname}/stream/live.m3u8`}
                       className="flex-1 bg-black text-gray-300 font-mono text-[9px] sm:text-[10px] px-2.5 py-1.5 rounded border border-gray-800 outline-none select-all cursor-text"
                       onClick={(e) => e.target.select()}
                     />
                     <button 
                       onClick={() => {
-                        navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/stream/live.m3u8`);
+                        navigator.clipboard.writeText(`http://${window.location.hostname}/stream/live.m3u8`);
                         alert("Stream URL Copied!");
                       }}
                       className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white rounded text-[10px] font-bold transition-all shadow-md whitespace-nowrap"
@@ -786,7 +840,7 @@ function AdminPanel() {
                   <label className="py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer w-full">
                     <Upload className="w-4 h-4 stroke-[3]" />
                     {isAdUploading ? 'Uploading Ad...' : 'Upload & Play Ad Now'}
-                    <input type="file" accept="video/*" onChange={handleAdUpload} className="hidden" disabled={isAdUploading} />
+                    <input type="file" accept="video/*,.mkv,.avi,.mov,.mp4,.webm,.wmv" onChange={handleAdUpload} className="hidden" disabled={isAdUploading} />
                   </label>
                 </div>
 
@@ -816,10 +870,33 @@ function AdminPanel() {
                     </div>
                   ))}
                   {ads.length === 0 && (
-                    <div className="text-center py-4 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
-                      No Ads Uploaded Yet
-                    </div>
+                    <div className="text-[10px] text-gray-500 text-center py-2 italic bg-[#1a1a1a] rounded-lg border border-gray-700/40">No ads uploaded yet.</div>
                   )}
+                </div>
+              </div>
+
+              {/* Azaan Automation Component */}
+              <div className="bg-[#2a2a2a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-700/60 flex flex-col gap-4">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Azaan Automation</span>
+                </div>
+                
+                <div className="text-[10px] text-gray-400 mb-1 leading-tight">
+                  Enable automatic ad playout for each prayer time. It will automatically play an uploaded ad containing the prayer name in its title (e.g. "Fajr Azaan").
+                </div>
+
+                <div className="flex flex-col gap-3 mt-2">
+                  {Object.keys(azaanToggles).map((prayer) => (
+                    <div key={prayer} className="flex items-center justify-between bg-[#1a1a1a] rounded-lg p-3 border border-gray-700/40">
+                      <span className="text-xs font-bold text-gray-200 tracking-wider uppercase">{prayer} AZAAN</span>
+                      <button 
+                        onClick={() => toggleAzaan(prayer, azaanToggles[prayer])}
+                        className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ease-in-out ${azaanToggles[prayer] ? 'bg-[#50BF7B]' : 'bg-gray-600'}`}
+                      >
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${azaanToggles[prayer] ? 'translate-x-6' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -927,10 +1004,10 @@ function AdminPanel() {
                 <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Stream Logo</span>
                 <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
-                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
+                    <label className={`py-2.5 rounded-lg text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm transition-all ${isUploadingLogo ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-[#1a1a1a] hover:bg-gray-800'}`}>
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
-                      Upload Logo
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                      {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" disabled={isUploadingLogo} />
                     </label>
                     <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
                       <ArrowUp className="w-3.5 h-3.5 -rotate-45 stroke-[3]" />
@@ -960,10 +1037,10 @@ function AdminPanel() {
                 <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">OTS Graphic</span>
                 <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
-                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
+                    <label className={`py-2.5 rounded-lg text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm transition-all ${isUploadingOts ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-[#1a1a1a] hover:bg-gray-800'}`}>
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
-                      Upload
-                      <input type="file" accept="image/*" onChange={handleOtsUpload} className="hidden" />
+                      {isUploadingOts ? 'Uploading...' : 'Upload'}
+                      <input type="file" accept="image/*" onChange={handleOtsUpload} className="hidden" disabled={isUploadingOts} />
                     </label>
                     <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
                       <ArrowUp className="w-3.5 h-3.5 rotate-135 stroke-[3]" />
@@ -1087,13 +1164,13 @@ function AdminPanel() {
                   <>
                     <video 
                       ref={publicVideo1Ref} 
-                      className={`absolute inset-0 w-full h-full object-cover z-0 ${publicActivePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                      className={`absolute inset-0 w-full h-full object-contain z-0 ${publicActivePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
                       playsInline 
                       muted={isMuted}
                     />
                     <video 
                       ref={publicVideo2Ref} 
-                      className={`absolute inset-0 w-full h-full object-cover z-0 ${publicActivePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                      className={`absolute inset-0 w-full h-full object-contain z-0 ${publicActivePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
                       playsInline 
                       muted={isMuted}
                     />
@@ -1346,6 +1423,93 @@ function AdminPanel() {
               )}
 
             </div>
+
+            {/* Site Content Settings Row */}
+            <div className="w-full mt-6 bg-[#1a1a1a] border border-gray-800 rounded-xl shadow-lg p-5 sm:p-6 flex flex-col gap-6">
+              <div className="flex items-center gap-3 border-b border-gray-800 pb-4">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                  <Settings className="w-5 h-5 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-sm sm:text-base">Site Pages & Content</h2>
+                  <p className="text-gray-500 text-[10px] sm:text-xs">Update your About Us, Contact info, and External Links</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">About Us Text (আমাদের সম্পর্কে)</label>
+                    <textarea 
+                      value={siteSettings.aboutUsText}
+                      onChange={(e) => setSiteSettings({...siteSettings, aboutUsText: e.target.value})}
+                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
+                      placeholder="Write about your channel..."
+                    ></textarea>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">News Portal Link (নিউজ পোর্টাল)</label>
+                    <input 
+                      type="url"
+                      value={siteSettings.newsPortalLink}
+                      onChange={(e) => setSiteSettings({...siteSettings, newsPortalLink: e.target.value})}
+                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
+                      placeholder="https://news.example.com"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">e-Paper Link (ই-পেপার)</label>
+                    <input 
+                      type="url"
+                      value={siteSettings.ePaperLink}
+                      onChange={(e) => setSiteSettings({...siteSettings, ePaperLink: e.target.value})}
+                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
+                      placeholder="https://epaper.example.com"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">Contact Email (যোগাযোগ)</label>
+                    <input 
+                      type="email"
+                      value={siteSettings.contactEmail}
+                      onChange={(e) => setSiteSettings({...siteSettings, contactEmail: e.target.value})}
+                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">Contact Phone</label>
+                    <input 
+                      type="text"
+                      value={siteSettings.contactPhone}
+                      onChange={(e) => setSiteSettings({...siteSettings, contactPhone: e.target.value})}
+                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-400 tracking-wider">Contact Address</label>
+                    <textarea 
+                      value={siteSettings.contactAddress}
+                      onChange={(e) => setSiteSettings({...siteSettings, contactAddress: e.target.value})}
+                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all h-20 resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 flex justify-end">
+                <button 
+                  onClick={handleSaveSettings}
+                  disabled={isSavingSettings}
+                  className="px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold text-sm tracking-wide transition-all shadow-md"
+                >
+                  {isSavingSettings ? 'Saving...' : 'Save Site Settings'}
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
 

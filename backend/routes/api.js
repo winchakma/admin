@@ -44,6 +44,52 @@ const getVideoDuration = (filePath) => {
   });
 };
 
+
+const chunkStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../uploads/temp');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}.part`);
+  }
+});
+const uploadChunks = multer({ storage: chunkStorage });
+
+router.post('/upload/chunk', protect, uploadChunks.single('chunk'), async (req, res) => {
+  try {
+    const { originalname, chunkIndex, totalChunks, uploadId } = req.body;
+    const chunkFile = req.file;
+
+    if (!chunkFile) return res.status(400).json({ error: 'No chunk file provided' });
+
+    const finalUploadDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(finalUploadDir)) {
+      fs.mkdirSync(finalUploadDir, { recursive: true });
+    }
+
+    const finalFilePath = path.join(finalUploadDir, `${uploadId}-${originalname}`);
+    
+    const chunkData = fs.readFileSync(chunkFile.path);
+    fs.appendFileSync(finalFilePath, chunkData);
+    
+    fs.unlinkSync(chunkFile.path);
+
+    if (parseInt(chunkIndex) === parseInt(totalChunks) - 1) {
+      const duration = await getVideoDuration(finalFilePath);
+      const relativePath = path.join('uploads', `${uploadId}-${originalname}`).replace(/\\/g, '/');
+      return res.json({ completed: true, filePath: relativePath, duration: duration });
+    } else {
+      return res.json({ completed: false, message: `Chunk ${chunkIndex} uploaded` });
+    }
+  } catch (error) {
+    console.error('Chunk upload error:', error);
+    res.status(500).json({ error: 'Chunk upload failed' });
+  }
+});
 /* --- Channel Routes (Live TV) --- */
 
 // Get all channels (PUBLIC ROUTE - used by Viewer Page)
@@ -164,21 +210,16 @@ router.get('/library', protect, async (req, res) => {
 });
 
 // Upload and add video to library (not playlist)
-router.post('/library/upload', protect, upload.single('video'), async (req, res) => {
+router.post('/library/upload', protect, upload.none(), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No video file uploaded' });
-    }
-
-    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
-    const fullPath = path.join(__dirname, '..', filePath);
-    const duration = await getVideoDuration(fullPath);
+    const { title, category, filePath, duration } = req.body;
+    if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
     const newAsset = new LibraryAsset({
-      title: req.body.title || req.file.originalname,
+      title: title || 'Untitled',
       filePath,
-      duration,
-      category: req.body.category || 'News'
+      duration: duration || 30,
+      category: category || 'News'
     });
 
     await newAsset.save();
@@ -269,30 +310,32 @@ router.post('/playlist', protect, async (req, res) => {
 });
 
 // Upload and add video to playlist
-router.post('/playlist/upload', protect, upload.single('video'), async (req, res) => {
+router.post('/playlist/upload', protect, upload.none(), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No video file uploaded' });
-    }
-
-    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
-    const fullPath = path.join(__dirname, '..', filePath);
-    const duration = await getVideoDuration(fullPath);
+    const { title, category, filePath, duration } = req.body;
+    if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
     // Get highest orderIndex to place this at the end
     const lastItem = await Playlist.findOne().sort('-orderIndex');
     const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
 
     const newItem = new Playlist({
-      title: req.body.title || req.file.originalname,
+      title: title || 'Untitled',
       filePath,
-      duration,
-      category: req.body.category || 'News',
+      duration: duration || 30,
+      category: category || 'News',
       orderIndex,
       status: 'active'
     });
 
     await newItem.save();
+    
+    // Notify clients
+    const updatedPlaylist = await Playlist.find().sort('orderIndex');
+    if (req.app.get('io')) {
+      req.app.get('io').emit('playlist_updated', updatedPlaylist);
+    }
+    
     res.status(201).json(newItem);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -509,25 +552,19 @@ router.get('/ads', protect, async (req, res) => {
 });
 
 // Upload and auto-play ad
-router.post('/ads/upload', protect, upload.single('video'), async (req, res) => {
+router.post('/ads/upload', protect, upload.none(), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No ad video file uploaded' });
-    }
-
-    const filePath = path.join('uploads', req.file.filename).replace(/\\/g, '/');
-    const fullPath = path.join(__dirname, '..', filePath);
-    const duration = await getVideoDuration(fullPath);
+    const { title, filePath, duration } = req.body;
+    if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
     const newAd = new AdItem({
-      title: req.body.title || req.file.originalname,
+      title: title || 'Untitled Ad',
       filePath,
-      duration
+      duration: duration || 30
     });
 
     await newAd.save();
-
-    // Notify clients
+    
     const updatedAds = await AdItem.find().sort({ createdAt: -1 });
     if (req.app.get('io')) {
       req.app.get('io').emit('ads_updated', updatedAds);
@@ -640,3 +677,6 @@ router.delete('/ads/:id', protect, async (req, res) => {
 });
 
 module.exports = router;
+
+// Dummy settings endpoint
+router.get('/settings', (req, res) => res.json({}));

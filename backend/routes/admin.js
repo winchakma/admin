@@ -63,4 +63,6 @@ router.delete('/invite/:id', async (req, res) => {
   }
 });
 
+router.get('/azaan/status', (req, res) => res.json({ enabled: false }));
+router.post('/azaan/toggle', (req, res) => res.json({ enabled: false }));
 module.exports = router;

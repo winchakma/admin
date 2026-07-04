@@ -41,17 +41,27 @@ const startFfmpegStream = (inputVideoPath) => {
     fs.mkdirSync(path.join(__dirname, 'stream'), { recursive: true });
   }
 
-  // FFmpeg drawtext requires escaped colons for Windows paths (e.g., C\:/path)
-  const escapedFontPath = path.join(__dirname, 'font.ttf').replace(/\\/g, '/').replace(':', '\\\\:');
-  const escapedTicker1 = path.join(__dirname, 'stream_data', 'ticker1.txt').replace(/\\/g, '/').replace(':', '\\\\:');
+  // Use relative paths for drawtext to avoid Windows absolute path escaping issues
+  const relFontPath = 'font.ttf';
+  const relTicker1 = 'stream_data/ticker1.txt';
 
   activeFfmpegCommand = ffmpeg(inputVideoPath)
     .inputOptions([
       '-stream_loop -1', // Loop the input video endlessly for a 24/7 feel
       '-re' // Read input at native frame rate
     ])
+
+    .complexFilter([
+      // Scale down to 720p to save CPU on large movies
+      `[0:v:0]scale=-2:720[vout]`
+    ])
     .outputOptions([
-      '-c:v copy',
+      '-map [vout]',
+      '-map 0:a:0?', // Map the first audio stream if it exists
+      '-c:v libx264',
+      '-preset ultrafast', // Use ultrafast to prevent CPU lag on large 3GB+ files
+      '-crf 28',
+      '-threads 0', // Utilize all available CPU threads
       '-c:a aac',
       '-ar 44100',
       '-f hls',
