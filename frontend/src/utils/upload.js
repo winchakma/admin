@@ -22,21 +22,36 @@ export const uploadFileInChunks = async (file, onProgress) => {
     formData.append('totalChunks', totalChunks);
     formData.append('uploadId', uploadId);
 
-    const response = await axios.post(`${API_URL}/api/upload/chunk`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      onUploadProgress: (progressEvent) => {
-        // Calculate total progress including previous chunks
-        const chunkProgress = progressEvent.loaded;
-        const totalProgress = start + chunkProgress;
-        const percentage = Math.round((totalProgress * 100) / file.size);
-        if (onProgress) onProgress(percentage);
-      }
-    });
+    let chunkSuccess = false;
+    let attempts = 0;
+    let response;
 
-    if (response.data.completed) {
+    while (!chunkSuccess && attempts < 3) {
+      try {
+        attempts++;
+        response = await axios.post(`${API_URL}/api/upload/chunk`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          onUploadProgress: (progressEvent) => {
+            // Calculate total progress including previous chunks
+            const chunkProgress = progressEvent.loaded;
+            const totalProgress = start + chunkProgress;
+            const percentage = Math.round((totalProgress * 100) / file.size);
+            if (onProgress) onProgress(percentage);
+          }
+        });
+        chunkSuccess = true;
+      } catch (error) {
+        if (attempts >= 3) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+      }
+    }
+
+    if (response && response.data.completed) {
       uploadResult = response.data;
     }
   }

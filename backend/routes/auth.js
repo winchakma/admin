@@ -6,6 +6,13 @@ const User = require('../models/User');
 const InvitedEmail = require('../models/InvitedEmail');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/role');
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 login requests per `window`
+  message: { success: false, message: 'Too many login attempts, please try again after 15 minutes' }
+});
 
 // Helper function to sign JWT
 const signToken = (id) => {
@@ -27,9 +34,7 @@ router.post('/register', async (req, res) => {
     // Check if email exists in InvitedEmail
     const isInvited = await InvitedEmail.findOne({ email: email.toLowerCase() });
     
-    // TEMPORARY: Allow first user to register without invite (Super Admin setup)
-    const userCount = await User.countDocuments();
-    if (!isInvited && userCount > 0) {
+    if (!isInvited) {
       return res.status(403).json({ success: false, message: 'This email is not authorized to register.' });
     }
 
@@ -43,11 +48,11 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user (first user is superadmin)
+    // Create user
     const user = await User.create({
       email,
       password: hashedPassword,
-      role: userCount === 0 ? 'superadmin' : 'admin'
+      role: 'admin' // Only standard admins can be registered via invite. Superadmins are seeded.
     });
 
     // Remove from invited list once registered
@@ -74,7 +79,7 @@ router.post('/register', async (req, res) => {
 
 // @route   POST /api/auth/login
 // @desc    Login user
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

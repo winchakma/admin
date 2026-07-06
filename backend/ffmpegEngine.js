@@ -23,7 +23,7 @@ const ensureStreamDataFiles = () => {
   });
 };
 
-const startFfmpegStream = (inputVideoPath) => {
+const startFfmpegStream = (inputVideoPath, offset = 0) => {
   stopFfmpegStream();
   ensureStreamDataFiles();
 
@@ -45,11 +45,16 @@ const startFfmpegStream = (inputVideoPath) => {
   const relFontPath = 'font.ttf';
   const relTicker1 = 'stream_data/ticker1.txt';
 
+  const inputOpts = [
+    '-re' // Read input at native frame rate
+  ];
+  
+  if (offset > 0) {
+    inputOpts.unshift(`-ss ${offset}`);
+  }
+
   activeFfmpegCommand = ffmpeg(inputVideoPath)
-    .inputOptions([
-      '-stream_loop -1', // Loop the input video endlessly for a 24/7 feel
-      '-re' // Read input at native frame rate
-    ])
+    .inputOptions(inputOpts)
 
     .complexFilter([
       // Scale down to 720p to save CPU on large movies
@@ -59,9 +64,11 @@ const startFfmpegStream = (inputVideoPath) => {
       '-map [vout]',
       '-map 0:a:0?', // Map the first audio stream if it exists
       '-c:v libx264',
-      '-preset ultrafast', // Use ultrafast to prevent CPU lag on large 3GB+ files
+      '-preset ultrafast', // Use ultrafast to prevent CPU lag on large files
       '-crf 28',
-      '-threads 0', // Utilize all available CPU threads
+      '-g 60', // Force keyframes every 60 frames for consistent HLS segmenting
+      '-sc_threshold 0', // Disable scene detection to keep strict keyframes
+      '-threads 2', // Limit threads so Express can still serve files to web viewers
       '-c:a aac',
       '-ar 44100',
       '-f hls',

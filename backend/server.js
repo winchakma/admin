@@ -25,7 +25,7 @@ app.set('io', io);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Serve uploaded media files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -61,3 +61,16 @@ server.listen(PORT, () => {
 
 // Set unlimited timeout for massive video uploads
 server.timeout = 0;
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled Server Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});

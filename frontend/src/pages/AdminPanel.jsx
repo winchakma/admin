@@ -40,10 +40,12 @@ function AdminPanel() {
 
   const previewVideo1Ref = useRef(null);
   const previewVideo2Ref = useRef(null);
+  const previewAdRef = useRef(null);
   const [previewActivePlayer, setPreviewActivePlayer] = useState(1);
   
   const publicVideo1Ref = useRef(null);
   const publicVideo2Ref = useRef(null);
+  const publicAdRef = useRef(null);
   const [publicActivePlayer, setPublicActivePlayer] = useState(1);
   
   const [overlays, setOverlays] = useState({
@@ -76,9 +78,6 @@ function AdminPanel() {
   const [uploadCategory, setUploadCategory] = useState('News');
   const [externalUrl, setExternalUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [isUploadingOts, setIsUploadingOts] = useState(false);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [currentTimeStr, setCurrentTimeStr] = useState('');
   const [currentDateStr, setCurrentDateStr] = useState('');
   const [currentDayStr, setCurrentDayStr] = useState('');
@@ -87,7 +86,7 @@ function AdminPanel() {
   // Rotating index for Time/Date/Day
   useEffect(() => {
     const rotater = setInterval(() => {
-      setRotationIndex(prev => (prev + 1) % 3);
+      setRotationIndex(prev => (prev + 1) % 2);
     }, 3000);
     return () => clearInterval(rotater);
   }, []);
@@ -98,45 +97,7 @@ function AdminPanel() {
   const [ads, setAds] = useState([]);
   const [adTitle, setAdTitle] = useState('');
   const [isAdUploading, setIsAdUploading] = useState(false);
-  const [azaanToggles, setAzaanToggles] = useState({
-    Fajr: false, Zohr: false, Asr: false, Maghrib: false, Isha: false
-  });
-
-  const fetchAzaanStatus = async () => {
-    try {
-      const res = await apiFetch(`${SOCKET_URL}/api/admin/azaan/status`);
-      if (res.ok) {
-        const data = await res.json();
-        setAzaanToggles(data);
-      }
-    } catch (err) {
-      console.warn('Could not fetch azaan status:', err);
-    }
-  };
-
-  const toggleAzaan = async (prayer, currentState) => {
-    try {
-      const newState = !currentState;
-      setAzaanToggles(prev => ({ ...prev, [prayer]: newState }));
-      await apiFetch(`${SOCKET_URL}/api/admin/azaan/toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prayer, state: newState })
-      });
-    } catch (err) {
-      console.warn('Could not toggle azaan:', err);
-    }
-  };
   const [isPushingLive, setIsPushingLive] = useState(false);
-
-  const [siteSettings, setSiteSettings] = useState({
-    aboutUsText: '',
-    contactEmail: '',
-    contactPhone: '',
-    contactAddress: '',
-    newsPortalLink: '',
-    ePaperLink: ''
-  });
 
 
   // Live time and date updater
@@ -166,98 +127,188 @@ function AdminPanel() {
     return () => clearInterval(timer);
   }, []);
 
-  const previewHlsRef = useRef(null);
-  const publicHlsRef = useRef(null);
+  // Dual Video Engine logic inside a reusable function
   const currentVideoIdRef = useRef(null);
   
-  const setupHlsPlayer = (videoRef, hlsRefObj) => {
-    if (!status.activeVideo || !overlays.isBroadcastActive) {
-      if (videoRef.current) {
-        videoRef.current.removeAttribute('src');
-        videoRef.current.load();
+  const setupDualPlayer = (video1Ref, video2Ref, adPlayerRef, activePlayer, setActivePlayer) => {
+    if (!status.activeVideo) {
+      if (video1Ref.current) {
+        video1Ref.current.removeAttribute('src');
+        video1Ref.current.load();
       }
-      if (hlsRefObj.current) {
-        hlsRefObj.current.destroy();
-        hlsRefObj.current = null;
+      if (video2Ref.current) {
+        video2Ref.current.removeAttribute('src');
+        video2Ref.current.load();
       }
+      if (adPlayerRef.current) {
+        adPlayerRef.current.removeAttribute('src');
+        adPlayerRef.current.load();
+      }
+      currentVideoIdRef.current = null;
       return;
     }
 
-    if (Hls.isSupported() && videoRef.current) {
-      if (hlsRefObj.current) {
-        hlsRefObj.current.destroy();
+    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+    const nextEl = activePlayer === 1 ? video2Ref.current : video1Ref.current;
+    if (!currentEl || !nextEl) return;
+
+    const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
+    const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
+      ? normalizedPath
+      : `${SOCKET_URL}/${normalizedPath}`;
+
+    const loadAndPlayVideo = (element, url, offset) => {
+      element.src = url;
+      element.load();
+      element.onloadedmetadata = () => {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log(e));
+      };
+      if (element.readyState >= 1) {
+        element.currentTime = offset || 0;
+        element.play().catch(e => console.log(e));
       }
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90
-      });
-      hlsRefObj.current = hls;
-      
-      const streamUrl = `${SOCKET_URL}/stream/live.m3u8`;
-      
-      hls.attachMedia(videoRef.current);
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
-        hls.loadSource(streamUrl);
-      });
-      
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (!status.isPaused) {
-          videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
+    };
+
+    if (status.activeVideo.isAd) {
+      if (adPlayerRef.current) {
+        const adSrcUrl = decodeURI(adPlayerRef.current.src);
+        if (!adPlayerRef.current.hasAttribute('src') || (!adSrcUrl.endsWith(videoUrl.split('?')[0]) && adSrcUrl !== videoUrl)) {
+          adPlayerRef.current.src = videoUrl;
+          adPlayerRef.current.load();
         }
-      });
-      
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              hls.destroy();
-              break;
+        if (adPlayerRef.current.readyState >= 1) {
+          const targetOffset = status.activeVideo.offset || 0;
+          if (Math.abs(adPlayerRef.current.currentTime - targetOffset) > 10) {
+            adPlayerRef.current.currentTime = targetOffset;
           }
         }
-      });
-    } else if (videoRef.current && videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-      videoRef.current.src = `${SOCKET_URL}/stream/live.m3u8`;
-      videoRef.current.addEventListener('loadedmetadata', () => {
-        if (!status.isPaused) {
-          videoRef.current.play().catch(e => console.log('Autoplay blocked:', e));
+        adPlayerRef.current.play().catch(e => console.log("Autoplay blocked:", e));
+      }
+      if (currentEl) {
+        currentEl.muted = true;
+      }
+      return;
+    } else {
+      if (adPlayerRef.current && !adPlayerRef.current.paused) {
+        adPlayerRef.current.pause();
+        adPlayerRef.current.removeAttribute('src');
+        adPlayerRef.current.load();
+      }
+      if (currentEl) {
+        currentEl.muted = isMuted; // Restore user's muted preference
+      }
+    }
+
+    if (currentVideoIdRef.current !== status.activeVideo.id) {
+      currentVideoIdRef.current = status.activeVideo.id;
+      
+      if (nextEl.hasAttribute('src') && (decodeURI(nextEl.src).endsWith(videoUrl.split('?')[0]) || decodeURI(nextEl.src) === videoUrl)) {
+        if (nextEl.readyState >= 1) {
+          const targetOffset = status.activeVideo.offset || 0;
+          if (Math.abs(nextEl.currentTime - targetOffset) > 1) {
+            nextEl.currentTime = targetOffset;
+          }
         }
-      });
+        nextEl.play().catch(e => console.log(e));
+        setActivePlayer(activePlayer === 1 ? 2 : 1);
+        
+        if (status.nextVideo) {
+          const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          currentEl.src = nextUrl;
+          currentEl.load();
+        }
+      } else {
+        nextEl.src = videoUrl;
+        nextEl.load();
+        
+        let hasSwapped = false;
+        const onReady = () => {
+          if (hasSwapped) return;
+          hasSwapped = true;
+          
+          const targetOffset = status.activeVideo.offset || 0;
+          if (Math.abs(nextEl.currentTime - targetOffset) > 1) {
+            nextEl.currentTime = targetOffset;
+          }
+          nextEl.play().catch(e => console.log(e));
+          setActivePlayer(activePlayer === 1 ? 2 : 1);
+          nextEl.removeEventListener('canplay', onReady);
+          nextEl.removeEventListener('loadeddata', onReady);
+          
+          if (status.nextVideo) {
+            const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+            const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+            currentEl.src = nextUrl;
+            currentEl.load();
+          }
+        };
+        nextEl.addEventListener('canplay', onReady);
+        nextEl.addEventListener('loadeddata', onReady);
+        
+        setTimeout(() => {
+          if (hasSwapped) return;
+          hasSwapped = true;
+          
+          nextEl.removeEventListener('canplay', onReady);
+          nextEl.removeEventListener('loadeddata', onReady);
+
+          if (nextEl.readyState >= 1) {
+            const targetOffset = status.activeVideo.offset || 0;
+            if (Math.abs(nextEl.currentTime - targetOffset) > 1) {
+              nextEl.currentTime = targetOffset;
+            }
+          }
+          
+          setActivePlayer(activePlayer === 1 ? 2 : 1);
+          nextEl.play().catch(e=>console.log(e));
+        }, 1500);
+      }
+    } else if (!currentEl.hasAttribute('src')) {
+      currentVideoIdRef.current = status.activeVideo.id;
+      loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
+    } else {
+      if (currentEl.readyState >= 1) {
+        const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+        if (currentDiff > 30 && !currentEl.seeking) {
+          const now = Date.now();
+          if (!currentEl.dataset.lastSeek || now - parseInt(currentEl.dataset.lastSeek) > 10000) {
+            currentEl.currentTime = status.activeVideo.offset;
+            currentEl.dataset.lastSeek = now.toString();
+          }
+        }
+        if (currentEl.paused) {
+          currentEl.play().catch(e => console.log(e));
+        }
+      }
+      
+      if (status.nextVideo) {
+        const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
+        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        if (!nextEl.hasAttribute('src') || (!decodeURI(nextEl.src).endsWith(nextUrl.split('?')[0]) && decodeURI(nextEl.src) !== nextUrl)) {
+          nextEl.src = nextUrl;
+          nextEl.load();
+        }
+      }
     }
   };
 
   useEffect(() => {
     // Only setup the players that are currently mounted (depends on activeTab)
     if (activeTab === 'admin') {
-      setupHlsPlayer(previewVideo1Ref, previewHlsRef);
+      setupDualPlayer(previewVideo1Ref, previewVideo2Ref, previewAdRef, previewActivePlayer, setPreviewActivePlayer);
     } else if (activeTab === 'public') {
-      setupHlsPlayer(publicVideo1Ref, publicHlsRef);
+      setupDualPlayer(publicVideo1Ref, publicVideo2Ref, publicAdRef, publicActivePlayer, setPublicActivePlayer);
     }
-    
-    return () => {
-      if (previewHlsRef.current) {
-        previewHlsRef.current.destroy();
-        previewHlsRef.current = null;
-      }
-      if (publicHlsRef.current) {
-        publicHlsRef.current.destroy();
-        publicHlsRef.current = null;
-      }
-    }
-  }, [status.activeVideo, activeTab, overlays.isBroadcastActive]);
+  }, [status.activeVideo, activeTab, previewActivePlayer, publicActivePlayer]);
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
-    const prev1 = previewVideo1Ref.current;
+    const prev1 = previewActivePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current;
     if (prev1) prev1.play().catch(e => console.log(e));
     
-    const pub1 = publicVideo1Ref.current;
+    const pub1 = publicActivePlayer === 1 ? publicVideo1Ref.current : publicVideo2Ref.current;
     if (pub1) pub1.play().catch(e => console.log(e));
   };
 
@@ -290,16 +341,8 @@ function AdminPanel() {
     fetchLibrary();
     fetchAds();
     fetchChannels();
-    fetchAzaanStatus();
-
-    fetch(`${SOCKET_URL}/api/settings`)
-      .then(res => res.json())
-      .then(data => {
-        if (!data.error) {
-          setSiteSettings(data);
-        }
-      })
-      .catch(err => console.warn('Could not fetch settings'));
+    
+    return () => s.disconnect();
   }, []);
 
   const fetchPlaylist = async () => {
@@ -506,50 +549,42 @@ function AdminPanel() {
 
   const handleOtsUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file || isUploadingOts) return;
+    if (!file) return;
 
-    setIsUploadingOts(true);
     const formData = new FormData();
     formData.append('image', file);
 
+    // Note: Do not update React state instantly with base64, as it breaks the background sync if the image is too large.
+    // Instead, rely purely on the socket event to pull down the final URL after upload.
+
     try {
-      const res = await apiFetch(`${SOCKET_URL}/api/overlays/upload-ots`, {
+      await apiFetch(`${SOCKET_URL}/api/overlays/upload-ots`, {
         method: 'POST',
         body: formData
       });
-      if (!res.ok) throw new Error('Upload failed');
-      const updatedConfig = await res.json();
-      setOverlays(prev => ({ ...prev, ...updatedConfig }));
     } catch (err) {
-      console.warn('OTS Image upload failed', err);
-      alert('Failed to upload OTS image.');
+      console.warn('OTS Image upload failed');
     } finally {
-      setIsUploadingOts(false);
+      // Reset input value to allow selecting same file again
       e.target.value = '';
     }
   };
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files[0];
-    if (!file || isUploadingLogo) return;
+    if (!file) return;
 
-    setIsUploadingLogo(true);
     const formData = new FormData();
     formData.append('image', file);
 
     try {
-      const res = await apiFetch(`${SOCKET_URL}/api/overlays/upload-logo`, {
+      await apiFetch(`${SOCKET_URL}/api/overlays/upload-logo`, {
         method: 'POST',
         body: formData
       });
-      if (!res.ok) throw new Error('Upload failed');
-      const updatedConfig = await res.json();
-      setOverlays(prev => ({ ...prev, ...updatedConfig }));
     } catch (err) {
-      console.warn('Logo upload failed', err);
-      alert('Failed to upload logo image.');
+      console.warn('Logo upload failed');
     } finally {
-      setIsUploadingLogo(false);
       e.target.value = '';
     }
   };
@@ -666,11 +701,23 @@ function AdminPanel() {
                   {status.activeVideo ? (
                       <>
                         <video 
-                          ref={previewVideo1Ref} 
-                          className="absolute inset-0 w-full h-full object-contain z-0 opacity-100 block" 
-                          playsInline 
-                          muted={isMuted}
-                        />
+                ref={previewVideo1Ref} 
+                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(previewActivePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                playsInline 
+                muted={isMuted}
+              />
+              <video 
+                ref={previewVideo2Ref} 
+                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(previewActivePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                playsInline 
+                muted={isMuted}
+              />
+              <video 
+                ref={previewAdRef} 
+                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
+                playsInline 
+                muted={isMuted}
+              />
                       </>
                   ) : (
                     <div className="absolute inset-0 bg-[#66DE93] z-0" />
@@ -685,16 +732,15 @@ function AdminPanel() {
                       <div className="w-12 h-12 rounded-full bg-pink-600 flex items-center justify-center shadow-lg">
                         <Play className="w-6 h-6 fill-white text-white ml-1" />
                       </div>
-                      <span>Click to Play / Unmute Preview</span>
                     </button>
                   )}
 
                   {overlays.logoActive && (
-                    <div className="absolute top-2.5 left-2.5 bg-[#111111] border border-gray-800 text-white font-extrabold text-[8px] sm:text-[10px] w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shadow z-20 overflow-hidden">
+                    <div className="absolute top-2.5 left-2.5 text-white font-extrabold text-[8px] sm:text-[10px] w-7 sm:w-10 rounded-lg z-20 overflow-hidden">
                       {overlays.logoImagePath ? (
-                        <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="max-w-full max-h-full object-contain" />
+                        <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="w-full h-auto block" />
                       ) : (
-                        "Logo"
+                        <div className="w-full aspect-square flex items-center justify-center">Logo</div>
                       )}
                     </div>
                   )}
@@ -702,63 +748,62 @@ function AdminPanel() {
 
 
                   {/* Tickers, OTS & Time/Date Aligned Bottom Rows */}
-                  <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-0.5 z-20 text-[8px] sm:text-[10px] font-bold text-white select-none drop-shadow pointer-events-none">
+                  <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-2 z-20 text-[8px] sm:text-[10px] font-bold text-white select-none drop-shadow pointer-events-none">
                     
                     {/* OTS Overlay */}
                     {overlays.otsActive && overlays.otsImagePath && (
-                      <div className="self-end w-9 h-9 sm:w-11 sm:h-11 bg-[#111111] border border-gray-800 flex items-center justify-center p-1 rounded shadow-md mb-1 pointer-events-auto">
-                        <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
+                      <div className="self-end w-7 sm:w-10 bg-[#111111] border border-gray-800 rounded shadow-md mb-1 pointer-events-auto overflow-hidden">
+                        <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="w-full h-auto block" />
                       </div>
                     )}
 
-                    {/* Row 1 (Ticker 1 & Date/Day) */}
-                    {(overlays.ticker1Active || overlays.showDate) && (
-                      <div className={`flex w-full shadow-lg ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
+                    {/* Row 1 (Ticker 1) */}
+                    {overlays.ticker1Active && (
+                      <div className={`flex w-full shadow-md mb-2 ${!overlays.ticker1Active ? 'justify-end' : ''}`}>
                         {/* Ticker 1 Title */}
                         {overlays.ticker1Active && (
-                          <div className="bg-white border-r border-gray-300 px-3 py-0.5 rounded-l max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden whitespace-nowrap font-bold">
-                            <span className="text-[10px] sm:text-xs truncate leading-tight">
+                          <div className="bg-white border-r border-gray-300 px-1 sm:px-2 py-0.5 rounded-l w-[10%] sm:w-[8%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden whitespace-nowrap font-bold">
+                            <span style={{ fontSize: `${Math.min(12, 9 * (10 / Math.max(4, (overlays.ticker1Title || 'Headline News 1').length)))}px` }}>
                               {overlays.ticker1Title}
                             </span>
                           </div>
                         )}
                         {/* Ticker 1 Text */}
                         {overlays.ticker1Active && (
-                          <div className="flex-1 bg-black border-y border-gray-800 px-2 py-0.5 flex items-center overflow-hidden">
-                            <marquee className="font-normal flex-1 text-white leading-tight" scrollamount="2">{overlays.ticker1Text}</marquee>
+                          <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showDate ? '' : 'rounded-r-md'}`}>
+                            <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
                           </div>
                         )}
-                        {/* Date/Day Bug */}
                         {overlays.showDate && (
-                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-1 sm:px-2 py-0.5 w-[20%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker1Active ? 'rounded' : 'rounded-r'}`}>
-                            {rotationIndex === 0 && <span>{currentDayStr || 'Day'}</span>}
-                            {rotationIndex === 1 && <span>{currentDateStr || 'Date'}</span>}
+                          <div className={`bg-black/90 backdrop-blur border border-l-0 border-gray-800 px-1 sm:px-2 py-0.5 w-[10%] sm:w-[8%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 text-[9px] sm:text-[10px] transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker1Active ? 'rounded border-l' : 'rounded-r'}`}>
+                            {rotationIndex === 0 && <span>{currentDateStr || 'Date'}</span>}
+                            {rotationIndex === 1 && <span>{currentDayStr || 'Day'}</span>}
                           </div>
                         )}
                       </div>
                     )}
 
-                    {/* Row 2 (Ticker 2 & Time) */}
-                    {(overlays.ticker2Active || overlays.showTime) && (
+                    {/* Row 2 (Ticker 2 & Unified Rotating Bug) */}
+                    {(overlays.ticker2Active || overlays.showDate || overlays.showTime) && (
                       <div className={`flex w-full shadow-lg ${!overlays.ticker2Active ? 'justify-end' : ''}`}>
                         {/* Ticker 2 Title */}
                         {overlays.ticker2Active && (
-                          <div className="bg-white border-r border-gray-300 px-3 py-0.5 rounded-l max-w-[30%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden whitespace-nowrap font-bold">
-                            <span className="text-[10px] sm:text-xs truncate leading-tight">
+                          <div className="bg-white border-r border-gray-300 px-1 sm:px-2 py-0.5 rounded-l w-[10%] sm:w-[8%] shrink-0 flex items-center justify-center uppercase tracking-wider text-black overflow-hidden whitespace-nowrap font-bold">
+                            <span style={{ fontSize: `${Math.min(12, 9 * (10 / Math.max(4, (overlays.ticker2Title || 'Headline News 2').length)))}px` }}>
                               {overlays.ticker2Title}
                             </span>
                           </div>
                         )}
                         {/* Ticker 2 Text */}
                         {overlays.ticker2Active && (
-                          <div className="flex-1 bg-black border-y border-gray-800 px-2 py-0.5 flex items-center overflow-hidden">
-                            <marquee className="font-normal flex-1 text-white leading-tight" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                          <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showTime ? '' : 'rounded-r-md'}`}>
+                            <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
                           </div>
                         )}
-                        {/* Time Bug */}
+                        {/* Time Only Box */}
                         {overlays.showTime && (
-                          <div className={`bg-black/90 backdrop-blur border border-gray-800 px-1 sm:px-2 py-0.5 w-[20%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded' : 'rounded-r'}`}>
-                            <span>{currentTimeStr || 'Time'}</span>
+                          <div className={`bg-black/90 backdrop-blur border border-l-0 border-gray-800 px-1 sm:px-2 py-0.5 w-[10%] sm:w-[8%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 text-[9px] sm:text-[10px] transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded border-l' : 'rounded-r'}`}>
+                            <span className="animate-pulse">{currentTimeStr || 'Time'}</span>
                           </div>
                         )}
                       </div>
@@ -870,33 +915,73 @@ function AdminPanel() {
                     </div>
                   ))}
                   {ads.length === 0 && (
-                    <div className="text-[10px] text-gray-500 text-center py-2 italic bg-[#1a1a1a] rounded-lg border border-gray-700/40">No ads uploaded yet.</div>
+                    <div className="text-center py-4 text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                      No Ads Uploaded Yet
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Azaan Automation Component */}
-              <div className="bg-[#2a2a2a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-700/60 flex flex-col gap-4">
-                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                  <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Azaan Automation</span>
-                </div>
+              {/* Azaan Scheduler */}
+              <div className="bg-[#1a1a1a] rounded-xl p-4 sm:p-5 shadow-sm border border-gray-800 flex flex-col gap-4 mt-6">
+                <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Automated Azaan Schedule</span>
+                <p className="text-[10px] text-gray-500 mb-2">Turn ON to automatically play the respective Azaan video at the scheduled time.</p>
                 
-                <div className="text-[10px] text-gray-400 mb-1 leading-tight">
-                  Enable automatic ad playout for each prayer time. It will automatically play an uploaded ad containing the prayer name in its title (e.g. "Fajr Azaan").
-                </div>
-
-                <div className="flex flex-col gap-3 mt-2">
-                  {Object.keys(azaanToggles).map((prayer) => (
-                    <div key={prayer} className="flex items-center justify-between bg-[#1a1a1a] rounded-lg p-3 border border-gray-700/40">
-                      <span className="text-xs font-bold text-gray-200 tracking-wider uppercase">{prayer} AZAAN</span>
-                      <button 
-                        onClick={() => toggleAzaan(prayer, azaanToggles[prayer])}
-                        className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors duration-300 ease-in-out ${azaanToggles[prayer] ? 'bg-[#50BF7B]' : 'bg-gray-600'}`}
-                      >
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${azaanToggles[prayer] ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                    </div>
-                  ))}
+                <div className="flex flex-col gap-3">
+                  {/* Fajr */}
+                  <div className="flex justify-between items-center bg-[#2a2a2a] p-2 sm:p-3 rounded-lg border border-gray-700/50">
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Fajr Azaan</span>
+                    <button 
+                      onClick={() => updateOverlayField({ azaanFajrActive: !overlays.azaanFajrActive })}
+                      className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 transition-all ${overlays.azaanFajrActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                    >
+                      <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.azaanFajrActive ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
+                  
+                  {/* Zohr */}
+                  <div className="flex justify-between items-center bg-[#2a2a2a] p-2 sm:p-3 rounded-lg border border-gray-700/50">
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Zohr Azaan</span>
+                    <button 
+                      onClick={() => updateOverlayField({ azaanZohrActive: !overlays.azaanZohrActive })}
+                      className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 transition-all ${overlays.azaanZohrActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                    >
+                      <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.azaanZohrActive ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
+                  
+                  {/* Asr */}
+                  <div className="flex justify-between items-center bg-[#2a2a2a] p-2 sm:p-3 rounded-lg border border-gray-700/50">
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Asr Azaan</span>
+                    <button 
+                      onClick={() => updateOverlayField({ azaanAsrActive: !overlays.azaanAsrActive })}
+                      className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 transition-all ${overlays.azaanAsrActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                    >
+                      <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.azaanAsrActive ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
+                  
+                  {/* Maghrib */}
+                  <div className="flex justify-between items-center bg-[#2a2a2a] p-2 sm:p-3 rounded-lg border border-gray-700/50">
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Maghrib Azaan</span>
+                    <button 
+                      onClick={() => updateOverlayField({ azaanMaghribActive: !overlays.azaanMaghribActive })}
+                      className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 transition-all ${overlays.azaanMaghribActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                    >
+                      <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.azaanMaghribActive ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
+                  
+                  {/* Isha */}
+                  <div className="flex justify-between items-center bg-[#2a2a2a] p-2 sm:p-3 rounded-lg border border-gray-700/50">
+                    <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Isha Azaan</span>
+                    <button 
+                      onClick={() => updateOverlayField({ azaanIshaActive: !overlays.azaanIshaActive })}
+                      className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full p-1 transition-all ${overlays.azaanIshaActive ? 'bg-[#50BF7B]' : 'bg-[#767676]'}`}
+                    >
+                      <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-[#2a2a2a] rounded-full transition-all ${overlays.azaanIshaActive ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'}`}></div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1004,10 +1089,10 @@ function AdminPanel() {
                 <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">Stream Logo</span>
                 <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
-                    <label className={`py-2.5 rounded-lg text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm transition-all ${isUploadingLogo ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-[#1a1a1a] hover:bg-gray-800'}`}>
+                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
-                      {isUploadingLogo ? 'Uploading...' : 'Upload Logo'}
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" disabled={isUploadingLogo} />
+                      Upload Logo
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                     </label>
                     <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
                       <ArrowUp className="w-3.5 h-3.5 -rotate-45 stroke-[3]" />
@@ -1037,10 +1122,10 @@ function AdminPanel() {
                 <span className="text-xs sm:text-sm font-extrabold text-gray-300 uppercase tracking-wide">OTS Graphic</span>
                 <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 flex flex-col gap-2.5">
-                    <label className={`py-2.5 rounded-lg text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm transition-all ${isUploadingOts ? 'bg-gray-800 opacity-50 cursor-not-allowed' : 'bg-[#1a1a1a] hover:bg-gray-800'}`}>
+                    <label className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-sm">
                       <Upload className="w-3.5 h-3.5 stroke-[3]" />
-                      {isUploadingOts ? 'Uploading...' : 'Upload'}
-                      <input type="file" accept="image/*" onChange={handleOtsUpload} className="hidden" disabled={isUploadingOts} />
+                      Upload
+                      <input type="file" accept="image/*" onChange={handleOtsUpload} className="hidden" />
                     </label>
                     <button className="py-2.5 rounded-lg bg-[#1a1a1a] hover:bg-gray-800 text-gray-300 font-bold text-xs tracking-wide flex items-center justify-center gap-1 shadow-sm">
                       <ArrowUp className="w-3.5 h-3.5 rotate-135 stroke-[3]" />
@@ -1149,9 +1234,7 @@ function AdminPanel() {
                   </button>
                 </div>
               </div>
-
             </div>
-
           </div>
         )}
 
@@ -1164,13 +1247,19 @@ function AdminPanel() {
                   <>
                     <video 
                       ref={publicVideo1Ref} 
-                      className={`absolute inset-0 w-full h-full object-contain z-0 ${publicActivePlayer === 1 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                      className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(publicActivePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                       playsInline 
                       muted={isMuted}
                     />
                     <video 
                       ref={publicVideo2Ref} 
-                      className={`absolute inset-0 w-full h-full object-contain z-0 ${publicActivePlayer === 2 ? 'opacity-100 block' : 'opacity-0 hidden'}`} 
+                      className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(publicActivePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                      playsInline 
+                      muted={isMuted}
+                    />
+                    <video 
+                      ref={publicAdRef} 
+                      className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
                       playsInline 
                       muted={isMuted}
                     />
@@ -1188,7 +1277,6 @@ function AdminPanel() {
                     <div className="w-16 h-16 rounded-full bg-pink-600 flex items-center justify-center shadow-2xl">
                       <Play className="w-8 h-8 fill-white text-white ml-1.5" />
                     </div>
-                    <span>Click to Unmute / Play Linear Stream</span>
                   </button>
                 )}
 
@@ -1204,7 +1292,7 @@ function AdminPanel() {
                   
                   {/* OTS graphic overlay in public player */}
                   {overlays.otsActive && overlays.otsImagePath && (
-                    <div className="self-end w-16 h-16 sm:w-24 sm:h-24 bg-[#111111] border border-gray-800 flex items-center justify-center p-2 rounded-lg shadow-lg mb-2 pointer-events-auto">
+                    <div className="self-end w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center p-2 rounded-lg mb-2 pointer-events-auto">
                       <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
                     </div>
                   )}
@@ -1423,93 +1511,6 @@ function AdminPanel() {
               )}
 
             </div>
-
-            {/* Site Content Settings Row */}
-            <div className="w-full mt-6 bg-[#1a1a1a] border border-gray-800 rounded-xl shadow-lg p-5 sm:p-6 flex flex-col gap-6">
-              <div className="flex items-center gap-3 border-b border-gray-800 pb-4">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                  <Settings className="w-5 h-5 text-blue-500" />
-                </div>
-                <div>
-                  <h2 className="text-white font-bold text-sm sm:text-base">Site Pages & Content</h2>
-                  <p className="text-gray-500 text-[10px] sm:text-xs">Update your About Us, Contact info, and External Links</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-400 tracking-wider">About Us Text (আমাদের সম্পর্কে)</label>
-                    <textarea 
-                      value={siteSettings.aboutUsText}
-                      onChange={(e) => setSiteSettings({...siteSettings, aboutUsText: e.target.value})}
-                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all h-32 resize-none"
-                      placeholder="Write about your channel..."
-                    ></textarea>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-400 tracking-wider">News Portal Link (নিউজ পোর্টাল)</label>
-                    <input 
-                      type="url"
-                      value={siteSettings.newsPortalLink}
-                      onChange={(e) => setSiteSettings({...siteSettings, newsPortalLink: e.target.value})}
-                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
-                      placeholder="https://news.example.com"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-400 tracking-wider">e-Paper Link (ই-পেপার)</label>
-                    <input 
-                      type="url"
-                      value={siteSettings.ePaperLink}
-                      onChange={(e) => setSiteSettings({...siteSettings, ePaperLink: e.target.value})}
-                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
-                      placeholder="https://epaper.example.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-400 tracking-wider">Contact Email (যোগাযোগ)</label>
-                    <input 
-                      type="email"
-                      value={siteSettings.contactEmail}
-                      onChange={(e) => setSiteSettings({...siteSettings, contactEmail: e.target.value})}
-                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-400 tracking-wider">Contact Phone</label>
-                    <input 
-                      type="text"
-                      value={siteSettings.contactPhone}
-                      onChange={(e) => setSiteSettings({...siteSettings, contactPhone: e.target.value})}
-                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-400 tracking-wider">Contact Address</label>
-                    <textarea 
-                      value={siteSettings.contactAddress}
-                      onChange={(e) => setSiteSettings({...siteSettings, contactAddress: e.target.value})}
-                      className="bg-[#2a2a2a] border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-gray-200 outline-none focus:border-blue-500/50 transition-all h-20 resize-none"
-                    ></textarea>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-2 flex justify-end">
-                <button 
-                  onClick={handleSaveSettings}
-                  disabled={isSavingSettings}
-                  className="px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-bold text-sm tracking-wide transition-all shadow-md"
-                >
-                  {isSavingSettings ? 'Saving...' : 'Save Site Settings'}
-                </button>
-              </div>
-            </div>
-
           </div>
         )}
 

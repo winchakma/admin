@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const Playlist = require('../models/Playlist');
 const AdItem = require('../models/AdItem');
 const AdState = require('../models/AdState');
@@ -12,6 +12,7 @@ const Channel = require('../models/Channel');
 const Overlay = require('../models/Overlay');
 const LibraryAsset = require('../models/LibraryAsset');
 const { protect } = require('../middleware/auth');
+const { authorize } = require('../middleware/role');
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -32,8 +33,12 @@ const upload = multer({ storage });
 // Helper to get video duration using ffprobe
 const getVideoDuration = (filePath) => {
   return new Promise((resolve) => {
-    const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`;
-    exec(command, (err, stdout) => {
+    execFile('ffprobe', [
+      '-v', 'error', 
+      '-show_entries', 'format=duration', 
+      '-of', 'default=noprint_wrappers=1:nokey=1', 
+      filePath
+    ], (err, stdout) => {
       if (err) {
         console.warn('ffprobe not found or failed, falling back to 30s default');
         return resolve(30); // Default fallback duration
@@ -65,6 +70,12 @@ router.post('/upload/chunk', protect, uploadChunks.single('chunk'), async (req, 
     const chunkFile = req.file;
 
     if (!chunkFile) return res.status(400).json({ error: 'No chunk file provided' });
+    
+    // Prevent giant uploads (DDoS prevention)
+    if (totalChunks > 1000) { // Limit to ~5GB total
+        fs.unlinkSync(chunkFile.path);
+        return res.status(400).json({ error: 'File too large' });
+    }
 
     const finalUploadDir = path.join(__dirname, '../uploads');
     if (!fs.existsSync(finalUploadDir)) {
@@ -72,13 +83,26 @@ router.post('/upload/chunk', protect, uploadChunks.single('chunk'), async (req, 
     }
 
     const finalFilePath = path.join(finalUploadDir, `${uploadId}-${originalname}`);
+    const chunkFilePath = path.join(finalUploadDir, `${uploadId}-${originalname}.part${chunkIndex}`);
     
-    const chunkData = fs.readFileSync(chunkFile.path);
-    fs.appendFileSync(finalFilePath, chunkData);
-    
-    fs.unlinkSync(chunkFile.path);
+    fs.renameSync(chunkFile.path, chunkFilePath);
 
-    if (parseInt(chunkIndex) === parseInt(totalChunks) - 1) {
+    let allChunksUploaded = true;
+    for (let i = 0; i < totalChunks; i++) {
+       if (!fs.existsSync(path.join(finalUploadDir, `${uploadId}-${originalname}.part${i}`))) {
+           allChunksUploaded = false;
+           break;
+       }
+    }
+
+    if (allChunksUploaded) {
+      for (let i = 0; i < totalChunks; i++) {
+        const partPath = path.join(finalUploadDir, `${uploadId}-${originalname}.part${i}`);
+        const chunkData = fs.readFileSync(partPath);
+        fs.appendFileSync(finalFilePath, chunkData);
+        fs.unlinkSync(partPath);
+      }
+      
       const duration = await getVideoDuration(finalFilePath);
       const relativePath = path.join('uploads', `${uploadId}-${originalname}`).replace(/\\/g, '/');
       return res.json({ completed: true, filePath: relativePath, duration: duration });
@@ -230,7 +254,7 @@ router.post('/library/upload', protect, upload.none(), async (req, res) => {
 });
 
 // Delete a library asset
-router.delete('/library/:id', protect, async (req, res) => {
+router.delete('/library/:id', protect, authorize('superadmin'), async (req, res) => {
   try {
     const item = await LibraryAsset.findById(req.params.id);
     if (!item) {
@@ -252,9 +276,10 @@ router.delete('/library/:id', protect, async (req, res) => {
 
 
 // Update a library asset
-router.put('/library/:id', protect, async (req, res) => {
+router.put('/library/:id', protect, authorize('superadmin'), async (req, res) => {
   try {
-    const asset = await LibraryAsset.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { title, category } = req.body;
+    const asset = await LibraryAsset.findByIdAndUpdate(req.params.id, { title, category }, { new: true });
     res.json(asset);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -310,7 +335,7 @@ router.post('/playlist', protect, async (req, res) => {
 });
 
 // Upload and add video to playlist
-router.post('/playlist/upload', protect, upload.none(), async (req, res) => {
+router.post('/playlist/upload', protect, authorize('superadmin'), upload.none(), async (req, res) => {
   try {
     const { title, category, filePath, duration } = req.body;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
@@ -343,7 +368,7 @@ router.post('/playlist/upload', protect, upload.none(), async (req, res) => {
 });
 
 // Add video to playlist FROM Library
-router.post('/playlist/add-from-library', protect, async (req, res) => {
+router.post('/playlist/add-from-library', protect, authorize('superadmin'), async (req, res) => {
   try {
     const { libraryId } = req.body;
     if (!libraryId) {
@@ -382,7 +407,7 @@ router.post('/playlist/add-from-library', protect, async (req, res) => {
 });
 
 // Reorder playlist items
-router.put('/playlist/reorder', protect, async (req, res) => {
+router.put('/playlist/reorder', protect, authorize('superadmin'), async (req, res) => {
   try {
     const { ids } = req.body; // Array of item IDs in the new order
     if (!Array.isArray(ids)) {
@@ -411,7 +436,7 @@ router.put('/playlist/reorder', protect, async (req, res) => {
 });
 
 // Delete playlist item
-router.delete('/playlist/:id', protect, async (req, res) => {
+router.delete('/playlist/:id', protect, authorize('superadmin'), async (req, res) => {
   try {
     const item = await Playlist.findById(req.params.id);
     if (!item) {
@@ -637,11 +662,7 @@ router.post('/ads/stop', protect, async (req, res) => {
       await adState.save();
 
       // Shift StreamState forward by ad duration
-      const streamState = await StreamState.findOne();
-      if (streamState && streamState.currentVideoStartTime) {
-        streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (actualElapsed * 1000));
-        await streamState.save();
-      }
+      // Live TV Style: We NO LONGER shift the clock. The movie plays naturally behind the Ad!
     }
     res.json({ message: 'Ad stopped' });
   } catch (err) {

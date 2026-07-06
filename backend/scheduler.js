@@ -80,6 +80,9 @@ let currentStatus = {
   streamUrl: '/stream/live.m3u8'
 };
 
+let cachedPlaylist = [];
+let lastPlaylistFetch = 0;
+
 // Start the scheduler
 const startScheduler = (io) => {
   // Ensure stream directory exists
@@ -185,16 +188,21 @@ const startScheduler = (io) => {
           await adState.save();
 
           // Shift StreamState to perfectly resume
-          let streamState = await StreamState.findOne();
-          if (streamState && streamState.currentVideoStartTime) {
-            streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (adDuration * 1000));
-            await streamState.save();
-          }
+          // Live TV Style: We NO LONGER shift the clock. The movie plays naturally behind the Ad!
         }
       }
 
-      const playlist = await Playlist.find({ status: 'active' }).sort('orderIndex');
-      if (playlist.length === 0) {
+      // Fetch active overlays to broadcast
+      const overlayConfig = await Overlay.findOne() || {};
+      
+      // Cache playlist to avoid 86,400 queries a day
+      if (Date.now() - lastPlaylistFetch > 5000 || cachedPlaylist.length === 0) {
+        cachedPlaylist = await Playlist.find({ status: 'active' }).sort('orderIndex');
+        lastPlaylistFetch = Date.now();
+      }
+      const playlist = cachedPlaylist;
+
+      if (!playlist || playlist.length === 0) {
         currentStatus.isPlaying = false;
         currentStatus.activeVideo = null;
         io.emit('stream_status', currentStatus);

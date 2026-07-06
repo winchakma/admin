@@ -52,6 +52,26 @@ const OverlaySchema = new mongoose.Schema({
   isBroadcastActive: {
     type: Boolean,
     default: true
+  },
+  azaanFajrActive: {
+    type: Boolean,
+    default: false
+  },
+  azaanZohrActive: {
+    type: Boolean,
+    default: false
+  },
+  azaanAsrActive: {
+    type: Boolean,
+    default: false
+  },
+  azaanMaghribActive: {
+    type: Boolean,
+    default: false
+  },
+  azaanIshaActive: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
