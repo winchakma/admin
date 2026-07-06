@@ -111,14 +111,17 @@ process.on('unhandledRejection', (err) => {
 });
 
 // Graceful Shutdown
-const shutdown = () => {
+const shutdown = async () => {
   console.log('Shutting down gracefully...');
-  server.close(() => {
+  server.close(async () => {
     console.log('HTTP server closed.');
-    mongoose.connection.close(false, () => {
+    try {
+      await mongoose.connection.close(false);
       console.log('MongoDB connection closed.');
-      process.exit(0);
-    });
+    } catch (err) {
+      console.error('Error closing MongoDB connection:', err);
+    }
+    process.exit(0);
   });
 };
 process.on('SIGINT', shutdown);
