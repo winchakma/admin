@@ -735,6 +735,7 @@ router.post('/ads/stop', protect, async (req, res) => {
         streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (actualElapsed * 1000));
         await streamState.save();
       }
+    }
     res.json({ message: 'Ad stopped' });
   } catch (err) {
     res.status(500).json({ error: err.message });
