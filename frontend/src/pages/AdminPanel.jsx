@@ -218,6 +218,7 @@ function AdminPanel() {
         if (status.nextVideo) {
           const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
           const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          currentEl.pause();
           currentEl.src = nextUrl;
           currentEl.load();
         }
@@ -242,6 +243,7 @@ function AdminPanel() {
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
             const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+            currentEl.pause();
             currentEl.src = nextUrl;
             currentEl.load();
           }
@@ -289,6 +291,7 @@ function AdminPanel() {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
         const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
         if (!nextEl.hasAttribute('src') || (!decodeURI(nextEl.src).endsWith(nextUrl.split('?')[0]) && decodeURI(nextEl.src) !== nextUrl)) {
+          nextEl.pause();
           nextEl.src = nextUrl;
           nextEl.load();
         }
