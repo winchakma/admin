@@ -188,8 +188,6 @@ const startScheduler = (io) => {
           return;
         } else {
           // Ad has finished playing, transition back to regular playlist
-          const adDuration = typeof adState.activeAd.duration === 'number' && !isNaN(adState.activeAd.duration) ? adState.activeAd.duration : 0;
-          adState.totalAdTimeOffset = (adState.totalAdTimeOffset || 0) + adDuration;
           adState.activeAd = null;
           await adState.save();
 
@@ -222,7 +220,7 @@ const startScheduler = (io) => {
       // Find the current video in the playlist
       let currentIndex = playlist.findIndex(item => item._id.toString() === streamState.currentVideoId?.toString());
       
-      // If the current video was deleted or not found, jump back to index 0
+      // If the current video was deleted or not found, jump to the first video
       if (currentIndex === -1) {
         currentIndex = 0;
         streamState.currentVideoId = playlist[0]._id;

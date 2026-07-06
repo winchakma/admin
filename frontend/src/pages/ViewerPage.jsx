@@ -248,8 +248,8 @@ const ViewerPage = () => {
           }
           nextEl.play().catch(e => console.log(e));
           setActivePlayer(activePlayer === 1 ? 2 : 1);
-          nextEl.removeEventListener('canplay', onReady);
-          nextEl.removeEventListener('loadeddata', onReady);
+          nextEl.oncanplay = null;
+          nextEl.onloadeddata = null;
           
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
@@ -259,15 +259,15 @@ const ViewerPage = () => {
             currentEl.load();
           }
         };
-        nextEl.addEventListener('canplay', onReady);
-        nextEl.addEventListener('loadeddata', onReady);
+        nextEl.oncanplay = onReady;
+        nextEl.onloadeddata = onReady;
         
         timeoutId = setTimeout(() => {
           if (hasSwapped) return;
           hasSwapped = true;
           
-          nextEl.removeEventListener('canplay', onReady);
-          nextEl.removeEventListener('loadeddata', onReady);
+          nextEl.oncanplay = null;
+          nextEl.onloadeddata = null;
           
           if (nextEl.readyState >= 1) {
             const targetOffset = status.activeVideo.offset || 0;
@@ -303,6 +303,14 @@ const ViewerPage = () => {
     
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
+      if (video1Ref.current) {
+        video1Ref.current.oncanplay = null;
+        video1Ref.current.onloadeddata = null;
+      }
+      if (video2Ref.current) {
+        video2Ref.current.oncanplay = null;
+        video2Ref.current.onloadeddata = null;
+      }
     };
   }, [status.activeVideo, overlays.isBroadcastActive, activePlayer, isPaused]); 
 

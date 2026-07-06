@@ -99,6 +99,14 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
           fs.appendFileSync(path.join(__dirname, 'uploads', 'ffmpeg-debug.txt'), 'Error: ' + err.message + '\\nStderr:\\n' + stderr + '\\n\\n');
         } catch(e) {}
         if (onCrash) onCrash();
+        
+        // Auto-restart logic after a crash
+        console.log('Auto-restarting FFmpeg stream in 5 seconds...');
+        setTimeout(() => {
+          if (!activeFfmpegCommand) {
+             startFfmpegStream(inputVideoPath, 0, onCrash);
+          }
+        }, 5000);
       }
     })
     .on('end', () => {
