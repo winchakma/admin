@@ -68,14 +68,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/library" 
-            element={
-              <ProtectedRoute>
-                <VideoLibrary />
-              </ProtectedRoute>
-            } 
-          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

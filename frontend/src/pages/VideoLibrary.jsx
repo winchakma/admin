@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { Home, Folder, Settings, Search, Film, Music, Rss, ArrowLeft, Play, Clock, MoreVertical, XCircle, ChevronDown, Upload } from 'lucide-react';
 
 import { uploadFileInChunks } from '../utils/upload';
@@ -25,7 +24,7 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export default function VideoLibrary() {
+export default function VideoLibrary({ setActiveTab }) {
   const [libraryAssets, setLibraryAssets] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,53 +134,13 @@ export default function VideoLibrary() {
     return true;
   });
 
-  return (
-    <div className="min-h-screen flex flex-col sm:flex-row bg-[#111111] text-gray-300 font-sans antialiased pb-20 sm:pb-0">
-      
-      {/* DESKTOP SIDEBAR */}
-      <div className="hidden sm:flex w-16 bg-[#111111] border-r border-gray-800 flex-col items-center py-6 justify-between shrink-0">
-        <div className="flex flex-col gap-6 items-center w-full mt-2">
-          <Link 
-            to="/admin" 
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-[#BDBDBD] transition-all"
-          >
-            <Home className="w-6 h-6" />
-          </Link>
-          
-          <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500 transition-all">
-            <Folder className="w-6 h-6" />
-          </div>
-        </div>
-        
-        <Link to="/settings" className="w-12 h-12 rounded-full flex items-center justify-center text-white hover:bg-[#BDBDBD] transition-all">
-          <Settings className="w-6 h-6" />
-        </Link>
-      </div>
-
-      {/* MOBILE BOTTOM NAV */}
-      <div className="flex sm:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#111111] border-t border-gray-800 z-50 items-center justify-around px-4 shadow-lg">
-        <Link to="/admin" className="flex flex-col items-center justify-center w-12 h-12 text-white">
-          <Home className="w-5 h-5" />
-          <span className="text-[9px] font-bold mt-0.5">Admin</span>
-        </Link>
-        <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-[#1a1a1a] text-pink-500 border border-pink-500">
-          <Folder className="w-5 h-5" />
-          <span className="text-[9px] font-bold mt-0.5">Library</span>
-        </div>
-        <Link to="/settings" className="flex flex-col items-center justify-center w-12 h-12 text-white">
-          <Settings className="w-5 h-5" />
-          <span className="text-[9px] font-bold mt-0.5">Settings</span>
-        </Link>
-      </div>
-
-      {/* MAIN CONTAINER */}
-      <div className="flex-1 flex flex-col p-4 sm:p-8 overflow-y-auto">
+    <div className="flex-1 flex flex-col w-full h-full text-gray-300 font-sans antialiased overflow-y-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-7xl w-full mx-auto">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider flex items-center gap-3">
-              <Link to="/admin" className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors inline-block sm:hidden">
+              <button onClick={() => setActiveTab('admin')} className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors inline-block sm:hidden">
                 <ArrowLeft className="w-5 h-5 text-white" />
-              </Link>
+              </button>
               VIDEO LIBRARY
             </h2>
             <p className="text-sm text-gray-500 mt-1 font-bold">Manage and organize your broadcast assets</p>
@@ -194,13 +153,13 @@ export default function VideoLibrary() {
               <Upload className="w-4 h-4" />
               Upload Video
             </button>
-            <Link 
-              to="/admin" 
+            <button 
+              onClick={() => setActiveTab('admin')} 
               className="px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2"
             >
               <Play className="w-4 h-4 fill-current" />
               Go to Control Center
-            </Link>
+            </button>
           </div>
         </div>
 

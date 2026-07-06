@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import VideoLibrary from './VideoLibrary';
 import io from 'socket.io-client';
 import Hls from 'hls.js';
 import { uploadFileInChunks } from '../utils/upload';
@@ -624,12 +625,12 @@ function AdminPanel() {
             <Home className="w-6 h-6" />
           </button>
           
-          <Link 
-            to="/library"
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all text-white hover:bg-[#BDBDBD]`}
+          <button 
+            onClick={() => setActiveTab('library')}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${activeTab === 'library' ? 'bg-[#1a1a1a] text-pink-500 shadow-inner border border-pink-500' : 'text-white hover:bg-[#BDBDBD]'}`}
           >
             <Folder className="w-6 h-6" />
-          </Link>
+          </button>
         </div>
         
         <button 
@@ -649,13 +650,13 @@ function AdminPanel() {
           <Home className="w-5 h-5" />
           <span className="text-[9px] font-bold mt-0.5">Admin</span>
         </button>
-        <Link 
-            to="/library"
-            className="flex flex-col items-center justify-center w-12 h-12 rounded-xl text-white"
+        <button 
+            onClick={() => setActiveTab('library')}
+            className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'library' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-white'}`}
           >
             <Folder className="w-5 h-5" />
             <span className="text-[9px] font-bold mt-0.5">Library</span>
-        </Link>
+        </button>
         <button 
           onClick={() => setActiveTab('settings')} 
           className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl ${activeTab === 'settings' ? 'bg-[#1a1a1a] text-pink-500 border border-pink-500' : 'text-white'}`}
@@ -669,11 +670,17 @@ function AdminPanel() {
       <div className="flex-1 flex flex-col p-4 sm:p-8 overflow-y-auto">
         
         {/* Top Bar for View Toggle */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-7xl w-full mx-auto">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider">IPTV STREAM CONTROL CENTER</h2>
+        {activeTab !== 'library' && (
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-7xl w-full mx-auto">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider">IPTV STREAM CONTROL CENTER</h2>
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'library' && (
+          <VideoLibrary setActiveTab={setActiveTab} />
+        )}
 
         {activeTab === 'admin' && (
           /* ADMIN DASHBOARD */
