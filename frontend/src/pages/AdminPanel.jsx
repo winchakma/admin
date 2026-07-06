@@ -237,8 +237,8 @@ function AdminPanel() {
           }
           nextEl.play().catch(e => console.log(e));
           setActivePlayer(activePlayer === 1 ? 2 : 1);
-          nextEl.removeEventListener('canplay', onReady);
-          nextEl.removeEventListener('loadeddata', onReady);
+          nextEl.oncanplay = null;
+          nextEl.onloadeddata = null;
           
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
@@ -248,15 +248,15 @@ function AdminPanel() {
             currentEl.load();
           }
         };
-        nextEl.addEventListener('canplay', onReady);
-        nextEl.addEventListener('loadeddata', onReady);
+        nextEl.oncanplay = onReady;
+        nextEl.onloadeddata = onReady;
         
         setTimeout(() => {
           if (hasSwapped) return;
           hasSwapped = true;
           
-          nextEl.removeEventListener('canplay', onReady);
-          nextEl.removeEventListener('loadeddata', onReady);
+          nextEl.oncanplay = null;
+          nextEl.onloadeddata = null;
 
           if (nextEl.readyState >= 1) {
             const targetOffset = status.activeVideo.offset || 0;
@@ -310,6 +310,8 @@ function AdminPanel() {
     return () => {
       [previewVideo1Ref, previewVideo2Ref, previewAdRef].forEach(ref => {
         if (ref.current) {
+          ref.current.oncanplay = null;
+          ref.current.onloadeddata = null;
           ref.current.removeAttribute('src');
           ref.current.load();
         }
