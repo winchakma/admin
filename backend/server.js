@@ -12,8 +12,10 @@ const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const { startScheduler } = require('./scheduler');
+const jwt = require('jsonwebtoken');
 
 const app = express();
+app.set('trust proxy', true);
 const server = http.createServer(app);
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*';
 const corsOptions = {
@@ -44,21 +46,35 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
-// Serve uploaded media files with Vault Guard
+// Serve uploaded media files securely using Dual-Token system
 app.use('/uploads', (req, res, next) => {
-  const referer = req.get('Referer') || req.get('Origin');
-  // Allow requests from live.ptv.com.bd or localhost, and allow requests with no referer ONLY if they have valid token (if we add tokens later).
-  // For now, strict referer checking:
-  const allowedHosts = ['live.ptv.com.bd', 'localhost', '194.242.57.190'];
-  
-  // Browsers sending requests from your frontend will include a Referer or Origin header
-  const isValidRequest = referer && allowedHosts.some(host => referer.includes(host));
-  
-  if (!isValidRequest) {
-    return res.status(403).send('Vault Access Denied: Direct video downloads are disabled.');
+  const token = req.query.token;
+
+  if (!token) {
+    return res.status(401).send('Vault Access Denied: No token provided.');
   }
-  
-  next();
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_change_in_production');
+    
+    if (decoded.role === 'admin') {
+      // Admin tokens are always allowed
+      return next();
+    }
+    
+    if (decoded.role === 'viewer') {
+      // Viewer tokens are locked to the specific IP address
+      const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+      if (decoded.ip !== clientIp) {
+         return res.status(403).send('Vault Access Denied: IP mismatch on Viewer Token.');
+      }
+      return next();
+    }
+    
+    return res.status(403).send('Vault Access Denied: Invalid role.');
+  } catch (err) {
+    return res.status(403).send('Vault Access Denied: Token expired or invalid.');
+  }
 }, express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
 // Serve local stream outputs
 app.use('/stream', express.static(path.join(__dirname, 'stream'), {

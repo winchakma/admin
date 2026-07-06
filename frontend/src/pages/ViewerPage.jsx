@@ -20,6 +20,7 @@ const ViewerPage = () => {
   const wrapperRef = useRef(null);
   const socketRef = useRef(null);
   const currentVideoIdRef = useRef(null);
+  const [viewerToken, setViewerToken] = useState(null);
 
   const [overlays, setOverlays] = useState({
     ticker1Text: '',
@@ -131,6 +132,18 @@ const ViewerPage = () => {
     };
   }, []);
 
+  // Fetch viewer token on mount
+  useEffect(() => {
+    fetch(`${SOCKET_URL}/api/viewer-token`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.token) {
+          setViewerToken(data.token);
+        }
+      })
+      .catch(err => console.warn('Failed to fetch viewer token', err));
+  }, []);
+
   // Dual Video Playback & Sync Engine
   useEffect(() => {
     let timeoutId;
@@ -156,9 +169,13 @@ const ViewerPage = () => {
     if (!currentEl || !nextEl) return;
 
     const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
-    const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
+    let videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
+      
+    if (viewerToken && !videoUrl.includes('?token=')) {
+      videoUrl += `?token=${viewerToken}`;
+    }
 
     const loadAndPlayVideo = (element, url, offset) => {
       element.src = url;
@@ -229,7 +246,8 @@ const ViewerPage = () => {
         
         if (status.nextVideo) {
           const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          if (viewerToken) nextUrl += `?token=${viewerToken}`;
           currentEl.pause();
           currentEl.src = nextUrl;
           currentEl.load();
@@ -254,7 +272,8 @@ const ViewerPage = () => {
           
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-            const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+            let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+            if (viewerToken) nextUrl += `?token=${viewerToken}`;
             setTimeout(() => {
               currentEl.pause();
               currentEl.src = nextUrl;
@@ -300,7 +319,8 @@ const ViewerPage = () => {
 
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        if (viewerToken) nextUrl += `?token=${viewerToken}`;
         if (nextEl.getAttribute('src') !== nextUrl) {
           nextEl.pause();
           nextEl.src = nextUrl;

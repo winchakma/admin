@@ -156,9 +156,13 @@ function AdminPanel() {
     if (!currentEl || !nextEl) return;
 
     const normalizedPath = status.activeVideo.filePath.replace(/\\/g, '/');
-    const videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
+    let videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
+      
+    if (token && !videoUrl.includes('?token=')) {
+      videoUrl += `?token=${token}`;
+    }
 
     const loadAndPlayVideo = (element, url, offset) => {
       element.src = url;
@@ -222,7 +226,8 @@ function AdminPanel() {
         
         if (status.nextVideo) {
           const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-          const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+          if (token) nextUrl += `?token=${token}`;
           currentEl.pause();
           currentEl.src = nextUrl;
           currentEl.load();
@@ -247,7 +252,8 @@ function AdminPanel() {
           
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-            const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+            let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+            if (token) nextUrl += `?token=${token}`;
             setTimeout(() => {
               currentEl.pause();
               currentEl.src = nextUrl;
@@ -296,7 +302,8 @@ function AdminPanel() {
       
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
-        const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
+        if (token) nextUrl += `?token=${token}`;
         if (nextEl.getAttribute('src') !== nextUrl) {
           nextEl.pause();
           nextEl.src = nextUrl;

@@ -16,6 +16,18 @@ const Overlay = require('../models/Overlay');
 const LibraryAsset = require('../models/LibraryAsset');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/role');
+const jwt = require('jsonwebtoken');
+
+// Generate temporary viewer token
+router.get('/viewer-token', (req, res) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
+  const token = jwt.sign(
+    { role: 'viewer', ip: clientIp },
+    process.env.JWT_SECRET || 'fallback_secret_key_change_in_production',
+    { expiresIn: '3h' } // Token expires in 3 hours
+  );
+  res.json({ token });
+});
 
 // Cleanup old temp part files (runs once per hour)
 setInterval(async () => {
