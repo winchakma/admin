@@ -439,7 +439,7 @@ const ViewerPage = () => {
                       )}
                       {overlays.ticker1Active && (
                         <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-[1%] py-[0.5%] flex items-center overflow-hidden ${overlays.showDate ? '' : 'rounded-r-md'}`}>
-                          <marquee className="font-normal flex-1 text-white text-[1.2vw]" scrollamount="2.5">{overlays.ticker1Text}</marquee>
+                          <marquee className="font-normal flex-1 text-white text-[1.2vw]" scrollamount={window.innerWidth < 768 ? "1" : "2.5"}>{overlays.ticker1Text}</marquee>
                         </div>
                       )}
                       {overlays.showDate && (
@@ -463,7 +463,7 @@ const ViewerPage = () => {
                       )}
                       {overlays.ticker2Active && (
                         <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-[1%] py-[0.5%] flex items-center overflow-hidden ${overlays.showTime ? '' : 'rounded-r-md'}`}>
-                          <marquee className="font-normal flex-1 text-white text-[1.2vw]" scrollamount="3">{overlays.ticker2Text}</marquee>
+                          <marquee className="font-normal flex-1 text-white text-[1.2vw]" scrollamount={window.innerWidth < 768 ? "1.5" : "3"}>{overlays.ticker2Text}</marquee>
                         </div>
                       )}
                       {overlays.showTime && (

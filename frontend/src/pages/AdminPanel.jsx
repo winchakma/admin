@@ -806,7 +806,7 @@ function AdminPanel() {
                         {/* Ticker 1 Text */}
                         {overlays.ticker1Active && (
                           <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showDate ? '' : 'rounded-r-md'}`}>
-                            <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
+                            <marquee className="font-normal flex-1 text-white" scrollamount={typeof window !== 'undefined' && window.innerWidth < 768 ? "1" : "2"}>{overlays.ticker1Text}</marquee>
                           </div>
                         )}
                         {overlays.showDate && (
@@ -832,7 +832,7 @@ function AdminPanel() {
                         {/* Ticker 2 Text */}
                         {overlays.ticker2Active && (
                           <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showTime ? '' : 'rounded-r-md'}`}>
-                            <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                            <marquee className="font-normal flex-1 text-white" scrollamount={typeof window !== 'undefined' && window.innerWidth < 768 ? "1.5" : "2.5"}>{overlays.ticker2Text}</marquee>
                           </div>
                         )}
                         {/* Time Only Box */}
