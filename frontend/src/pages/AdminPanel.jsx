@@ -772,9 +772,7 @@ function AdminPanel() {
                         {/* Ticker 1 Text */}
                         {overlays.ticker1Active && (
                           <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showDate ? '' : 'rounded-r-md'}`}>
-                            <div className="flex-1 overflow-hidden whitespace-nowrap relative">
-                              <div className="animate-marquee font-normal text-white inline-block">{overlays.ticker1Text}</div>
-                            </div>
+                            <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
                           </div>
                         )}
                         {overlays.showDate && (
@@ -797,9 +795,12 @@ function AdminPanel() {
                             </span>
                           </div>
                         )}
-                            <div className="flex-1 overflow-hidden whitespace-nowrap relative">
-                              <div className="animate-marquee font-normal text-white inline-block">{overlays.ticker2Text}</div>
-                            </div>
+                        {/* Ticker 2 Text */}
+                        {overlays.ticker2Active && (
+                          <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showTime ? '' : 'rounded-r-md'}`}>
+                            <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
+                          </div>
+                        )}
                         {/* Time Only Box */}
                         {overlays.showTime && (
                           <div className={`bg-black/90 backdrop-blur border border-l-0 border-gray-800 px-1 sm:px-2 py-0.5 w-[10%] sm:w-[8%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 text-[9px] sm:text-[10px] transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded border-l' : 'rounded-r'}`}>
