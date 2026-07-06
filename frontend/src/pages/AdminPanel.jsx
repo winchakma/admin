@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   ArrowUp,
   XCircle,
-  MoreVertical
+  MoreVertical,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 
 const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
@@ -38,6 +40,8 @@ function AdminPanel() {
   const [libraryAssets, setLibraryAssets] = useState([]);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [activePlayer, setActivePlayer] = useState(1);
 
   const previewVideo1Ref = useRef(null);
   const previewVideo2Ref = useRef(null);
@@ -737,19 +741,19 @@ function AdminPanel() {
                       <>
                         <video 
                 ref={previewVideo1Ref} 
-                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(previewActivePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                className={`absolute inset-0 w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} bg-black transition-opacity duration-300 ${(previewActivePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
               <video 
                 ref={previewVideo2Ref} 
-                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(previewActivePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                className={`absolute inset-0 w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} bg-black transition-opacity duration-300 ${(previewActivePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
               <video 
                 ref={previewAdRef} 
-                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
+                className={`absolute inset-0 w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
@@ -857,6 +861,13 @@ function AdminPanel() {
                       className="flex-1 bg-black text-gray-300 font-mono text-[9px] sm:text-[10px] px-2.5 py-1.5 rounded border border-gray-800 outline-none select-all cursor-text"
                       onClick={(e) => e.target.select()}
                     />
+                    <button 
+                      onClick={() => setIsZoomed(!isZoomed)} 
+                      className="text-white hover:text-blue-500 transition-colors"
+                      title={isZoomed ? "Zoom Out" : "Zoom to Fill"}
+                    >
+                      {isZoomed ? <ZoomOut className="w-5 h-5" /> : <ZoomIn className="w-5 h-5" />}
+                    </button>
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(`http://${window.location.hostname}/stream/live.m3u8`);

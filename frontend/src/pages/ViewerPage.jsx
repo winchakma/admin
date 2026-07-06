@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
-import { Play, Pause, Volume2, VolumeX, Maximize, Settings, CircleDot, Monitor, CheckCircle, User, List } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize, Settings, CircleDot, Monitor, CheckCircle, User, List, ZoomIn, ZoomOut } from 'lucide-react';
 
 const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
 
@@ -13,6 +13,7 @@ const ViewerPage = () => {
   const hideControlsTimeoutRef = useRef(null);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [selectedQuality, setSelectedQuality] = useState('Auto');
+  const [isZoomed, setIsZoomed] = useState(false);
   const video1Ref = useRef(null);
   const video2Ref = useRef(null);
   const adPlayerRef = useRef(null);
@@ -364,19 +365,19 @@ const ViewerPage = () => {
             <div className={`absolute inset-0 w-full h-full ${status.activeVideo && overlays.isBroadcastActive ? 'block' : 'hidden'}`}>
               <video 
                 ref={video1Ref} 
-                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(activePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                className={`absolute inset-0 w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} bg-black transition-opacity duration-300 ${(activePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
               <video 
                 ref={video2Ref} 
-                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(activePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
+                className={`absolute inset-0 w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} bg-black transition-opacity duration-300 ${(activePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
               <video 
                 ref={adPlayerRef} 
-                className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
+                className={`absolute inset-0 w-full h-full ${isZoomed ? 'object-cover' : 'object-contain'} bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
@@ -574,6 +575,13 @@ const ViewerPage = () => {
                           </div>
                         )}
                       </div>
+                      <button 
+                        onClick={() => setIsZoomed(!isZoomed)} 
+                        className="text-white hover:text-blue-500 transition-colors"
+                        title={isZoomed ? "Zoom Out" : "Zoom to Fill"}
+                      >
+                        {isZoomed ? <ZoomOut className="w-5 h-5" /> : <ZoomIn className="w-5 h-5" />}
+                      </button>
                       <button onClick={() => {
                         if (!document.fullscreenElement) {
                           wrapperRef.current?.requestFullscreen().then(() => {
