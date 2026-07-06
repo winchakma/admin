@@ -192,9 +192,6 @@ const startScheduler = (io) => {
         }
       }
 
-      // Fetch active overlays to broadcast
-      const overlayConfig = await Overlay.findOne() || {};
-      
       // Cache playlist to avoid 86,400 queries a day
       if (Date.now() - lastPlaylistFetch > 5000 || cachedPlaylist.length === 0) {
         cachedPlaylist = await Playlist.find({ status: 'active' }).sort('orderIndex');
