@@ -43,11 +43,7 @@ function AdminPanel() {
   const previewAdRef = useRef(null);
   const [previewActivePlayer, setPreviewActivePlayer] = useState(1);
   
-  const publicVideo1Ref = useRef(null);
-  const publicVideo2Ref = useRef(null);
-  const publicAdRef = useRef(null);
-  const [publicActivePlayer, setPublicActivePlayer] = useState(1);
-  
+
   const [overlays, setOverlays] = useState({
     ticker1Text: 'Headline Text',
     ticker1Title: 'Title Card',
@@ -304,14 +300,12 @@ function AdminPanel() {
     // Only setup the players that are currently mounted (depends on activeTab)
     if (activeTab === 'admin') {
       setupDualPlayer(previewVideo1Ref, previewVideo2Ref, previewAdRef, previewActivePlayer, setPreviewActivePlayer);
-    } else if (activeTab === 'public') {
-      setupDualPlayer(publicVideo1Ref, publicVideo2Ref, publicAdRef, publicActivePlayer, setPublicActivePlayer);
     }
-  }, [status.activeVideo, activeTab, previewActivePlayer, publicActivePlayer]);
+  }, [status.activeVideo, activeTab, previewActivePlayer]);
 
   useEffect(() => {
     return () => {
-      [previewVideo1Ref, previewVideo2Ref, previewAdRef, publicVideo1Ref, publicVideo2Ref, publicAdRef].forEach(ref => {
+      [previewVideo1Ref, previewVideo2Ref, previewAdRef].forEach(ref => {
         if (ref.current) {
           ref.current.removeAttribute('src');
           ref.current.load();
@@ -324,9 +318,6 @@ function AdminPanel() {
     setIsMuted(false);
     const prev1 = previewActivePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current;
     if (prev1) prev1.play().catch(e => console.log(e));
-    
-    const pub1 = publicActivePlayer === 1 ? publicVideo1Ref.current : publicVideo2Ref.current;
-    if (pub1) pub1.play().catch(e => console.log(e));
   };
 
   // Connect Socket.io
@@ -675,12 +666,6 @@ function AdminPanel() {
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider">IPTV STREAM CONTROL CENTER</h2>
           </div>
-          <button 
-            onClick={() => setActiveTab(activeTab === 'admin' ? 'public' : 'admin')} 
-            className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all text-center"
-          >
-            {activeTab === 'admin' ? 'Go to Public Viewer Page' : 'Return to Admin Panel'}
-          </button>
         </div>
 
         {activeTab === 'admin' && (
@@ -1253,124 +1238,6 @@ function AdminPanel() {
           </div>
         )}
 
-        {activeTab === 'public' && (
-          /* VIEWER MODE */
-          <div className="flex flex-col items-center justify-center p-2 sm:p-8 bg-slate-900 min-h-[60vh] sm:min-h-[80vh] rounded-2xl border border-slate-800 max-w-7xl w-full mx-auto">
-            <div className="w-full max-w-4xl bg-black rounded-xl overflow-hidden shadow-2xl relative">
-              <div className="aspect-video w-full bg-black relative overflow-hidden flex flex-col justify-between p-4 sm:p-6">
-                {status.activeVideo ? (
-                  <>
-                    <video 
-                      ref={publicVideo1Ref} 
-                      className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(publicActivePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
-                      playsInline 
-                      muted={isMuted}
-                    />
-                    <video 
-                      ref={publicVideo2Ref} 
-                      className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(publicActivePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
-                      playsInline 
-                      muted={isMuted}
-                    />
-                    <video 
-                      ref={publicAdRef} 
-                      className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
-                      playsInline 
-                      muted={isMuted}
-                    />
-                  </>
-                ) : (
-                  <div className="absolute inset-0 bg-[#66DE93] z-0" />
-                )}
-
-                {/* Play/Unmute Button overlay */}
-                {isMuted && status.activeVideo && (
-                  <button 
-                    onClick={handlePlayUnmute}
-                    className="absolute inset-0 w-full h-full bg-black/60 flex flex-col items-center justify-center gap-3 text-white font-bold text-sm transition-all hover:bg-black/75 z-10 cursor-pointer"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-pink-600 flex items-center justify-center shadow-2xl">
-                      <Play className="w-8 h-8 fill-white text-white ml-1.5" />
-                    </div>
-                  </button>
-                )}
-
-                {/* Site Logo */}
-                <div className="absolute top-4 left-4 bg-[#111111] border border-gray-800 text-white font-extrabold text-xs sm:text-sm w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg z-20">
-                  Logo
-                </div>
-
-
-
-                {/* Tickers, OTS & Time/Date Aligned Bottom Rows */}
-                <div className="absolute bottom-2 left-2 right-2 flex flex-col gap-1 z-20 text-[9px] sm:text-xs font-bold text-white select-none pointer-events-none">
-                  
-                  {/* OTS graphic overlay in public player */}
-                  {overlays.otsActive && overlays.otsImagePath && (
-                    <div className="self-end w-16 h-16 sm:w-24 sm:h-24 flex items-center justify-center p-2 rounded-lg mb-2 pointer-events-auto">
-                      <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="max-w-full max-h-full object-contain" />
-                    </div>
-                  )}
-
-                  {/* Row 1 (Ticker 1 & Time) */}
-                  {overlays.ticker1Active && (
-                    <div className="flex gap-1 w-full shadow-md">
-                      {/* Ticker 1 Title */}
-                      <div className="bg-white border border-gray-300 px-3 py-1.5 rounded-l w-auto max-w-[30%] shrink-0 text-center flex items-center justify-center uppercase tracking-wide overflow-hidden pointer-events-auto text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold text-black">
-                        <span className="truncate">
-                          {overlays.ticker1Title}
-                        </span>
-                      </div>
-                      {/* Ticker 1 Text */}
-                      <div className="flex-1 bg-black border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
-                        <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
-                      </div>
-                      {/* Time */}
-                      {overlays.showTime && (
-                        <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
-                          {currentTimeStr}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Row 2 (Ticker 2 & Date) */}
-                  {overlays.ticker2Active && (
-                    <div className="flex gap-1 w-full shadow-md">
-                      {/* Ticker 2 Title */}
-                      <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-l w-auto max-w-[30%] shrink-0 text-center flex items-center justify-center uppercase tracking-wide overflow-hidden pointer-events-auto text-ellipsis whitespace-nowrap text-[9px] sm:text-[10px] font-bold">
-                        <span className="truncate">
-                          {overlays.ticker2Title}
-                        </span>
-                      </div>
-                      {/* Ticker 2 Text */}
-                      <div className="flex-1 bg-[#2a2a2a] border-y border-gray-800 px-3 py-1.5 flex items-center overflow-hidden">
-                        <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
-                      </div>
-                      {/* Date */}
-                      {overlays.showDate && (
-                        <div className="bg-[#111111] border border-gray-800 px-3 py-1.5 rounded-r min-w-[70px] sm:min-w-[90px] text-center font-mono flex items-center justify-center">
-                          {currentDateStr}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-
-              <div className="bg-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between border-t border-slate-700">
-                <span className="text-xs sm:text-sm font-bold text-slate-300">Live Linear Broadcast (24/7 View Mode)</span>
-                <button 
-                  onClick={() => setActiveTab('admin')} 
-                  className="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 rounded text-[10px] sm:text-xs font-bold text-white transition-all"
-                >
-                  Return to Dashboard
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* --- SETTINGS / SYSTEM OVERVIEW --- */}
         {activeTab === 'settings' && (
