@@ -7,6 +7,12 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 let activeFfmpegCommand = null;
 
+process.on('exit', () => {
+  if (activeFfmpegCommand) {
+    activeFfmpegCommand.kill('SIGKILL');
+  }
+});
+
 // Ensure stream data files exist so drawtext doesn't crash on startup
 const ensureStreamDataFiles = () => {
   const dataDir = path.join(__dirname, 'stream_data');

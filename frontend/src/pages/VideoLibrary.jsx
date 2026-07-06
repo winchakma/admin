@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Home, Folder, Settings, Search, Film, Music, Rss, ArrowLeft, Play, Clock, MoreVertical, XCircle, ChevronDown, Upload } from 'lucide-react';
-import { io } from 'socket.io-client';
+
 import { uploadFileInChunks } from '../utils/upload';
 
 const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
@@ -32,29 +32,16 @@ export default function VideoLibrary() {
   const [activeMenu, setActiveMenu] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const socketRef = useRef(null);
+  const [isDeleting, setIsDeleting] = useState(null);
+  
   const fileInputRef = useRef(null);
-
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadCategory, setUploadCategory] = useState('News');
   const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
-    const s = io(SOCKET_URL, { reconnectionAttempts: 5, timeout: 5000 });
-    socketRef.current = s;
-
-    s.on('playlist_updated', () => {
-      // Library is separate now, no need to update on playlist changes
-    });
-
-    s.on('stream_status', (data) => {
-      // Status not strictly needed for library anymore unless we want to show it
-    });
-
     fetchLibrary();
-
-    return () => s.disconnect();
   }, []);
 
   const fetchLibrary = async () => {
@@ -118,11 +105,14 @@ export default function VideoLibrary() {
 
   const handleRemoveVideo = async (id) => {
     if (!window.confirm('Are you sure you want to permanently delete this video from the library?')) return;
+    setIsDeleting(id);
     try {
       await apiFetch(`${SOCKET_URL}/api/library/${id}`, { method: 'DELETE' });
-      fetchLibrary();
+      await fetchLibrary();
     } catch (err) {
       console.warn('Delete failed');
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -274,9 +264,14 @@ export default function VideoLibrary() {
                     </h3>
                     <button 
                       onClick={() => handleRemoveVideo(video._id)}
-                      className="text-gray-600 hover:text-[#C92C2C] transition-colors p-1 shrink-0"
+                      disabled={isDeleting === video._id}
+                      className="text-gray-600 hover:text-[#C92C2C] transition-colors p-1 shrink-0 disabled:opacity-50"
                     >
-                      <XCircle className="w-5 h-5" />
+                      {isDeleting === video._id ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-gray-600 border-t-white animate-spin" />
+                      ) : (
+                        <XCircle className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                   

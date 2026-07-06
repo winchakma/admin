@@ -10,14 +10,6 @@ const https = require('https');
 const { startFfmpegStream, stopFfmpegStream } = require('./ffmpegEngine');
 
 let todayPrayerTimes = null;
-let azanPlayedToday = {
-  Fajr: false,
-  Zohr: false,
-  Asr: false,
-  Maghrib: false,
-  Isha: false,
-  dateFetched: null
-};
 
 // Fixed prayer schedule provided by the client (12-hour format)
 const staticPrayerTimes = {
@@ -42,14 +34,20 @@ const parseTime12hToMinutes = (timeStr) => {
   return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
 };
 
-const updatePrayerTimes = () => {
-  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+const updatePrayerTimes = async () => {
+  const timezone = process.env.TIMEZONE || "Asia/Dhaka";
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
   const day = d.getDate().toString().padStart(2, '0');
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
   const year = d.getFullYear();
   const dateStr = `${day}-${month}-${year}`;
 
-  if (azanPlayedToday.dateFetched === dateStr) return;
+  let adState = await AdState.findOne();
+  if (!adState) {
+    adState = new AdState({ totalAdTimeOffset: 0 });
+  }
+
+  if (adState.azanDateFetched === dateStr) return;
 
   const currentDayOfWeek = d.getDay(); // 0-6
   todayPrayerTimes = staticPrayerTimes[currentDayOfWeek];
@@ -57,19 +55,20 @@ const updatePrayerTimes = () => {
   // Initialize current time in minutes to prevent spamming past azans on server restart
   const currentMinutes = d.getHours() * 60 + d.getMinutes();
   
-  azanPlayedToday = {
+  adState.azanPlayedToday = {
     Fajr: parseTime12hToMinutes(todayPrayerTimes.Fajr) <= currentMinutes,
     Zohr: parseTime12hToMinutes(todayPrayerTimes.Zohr) <= currentMinutes,
     Asr: parseTime12hToMinutes(todayPrayerTimes.Asr) <= currentMinutes,
     Maghrib: parseTime12hToMinutes(todayPrayerTimes.Maghrib) <= currentMinutes,
-    Isha: parseTime12hToMinutes(todayPrayerTimes.Isha) <= currentMinutes,
-    dateFetched: dateStr
+    Isha: parseTime12hToMinutes(todayPrayerTimes.Isha) <= currentMinutes
   };
-  console.log(`[Azan System] Loaded Static Prayer Times for Dhaka (${dateStr}):`, todayPrayerTimes);
+  adState.azanDateFetched = dateStr;
+  await adState.save();
+  console.log(`[Azan System] Loaded Static Prayer Times for ${timezone} (${dateStr}):`, todayPrayerTimes);
 };
 
-// Fetch immediately on startup
-updatePrayerTimes();
+// Fetch immediately on startup is delayed until DB connects
+setTimeout(() => updatePrayerTimes().catch(console.error), 2000);
 
 let activeFfmpegProcess = null;
 let currentStatus = {
@@ -103,28 +102,35 @@ const startScheduler = (io) => {
         await adState.save();
       }
 
-      // 1. Fetch new prayer times if day changed in Dhaka
-      updatePrayerTimes();
+      // 1. Fetch new prayer times if day changed
+      await updatePrayerTimes();
+      
+      // Reload adState after update
+      adState = await AdState.findOne();
 
       // 2. Check if it's Azan time right now
       if (todayPrayerTimes && (!adState.activeAd || !adState.activeAd.startedAt)) {
-        const dhakaDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+        const timezone = process.env.TIMEZONE || "Asia/Dhaka";
+        const dhakaDate = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
         const currentMinutes = dhakaDate.getHours() * 60 + dhakaDate.getMinutes();
 
         for (const [prayer, timeStr] of Object.entries(todayPrayerTimes)) {
           const prayerMinutes = parseTime12hToMinutes(timeStr);
           
-          if (currentMinutes >= prayerMinutes && !azanPlayedToday[prayer]) {
-            azanPlayedToday[prayer] = true;
+          if (currentMinutes >= prayerMinutes && adState.azanPlayedToday && !adState.azanPlayedToday[prayer]) {
+            adState.azanPlayedToday[prayer] = true;
+            // Save state immediately to prevent race conditions
+            await adState.save();
             console.log(`[Azan System] Time reached for ${prayer} Azan (${timeStr}). Triggering video...`);
 
             try {
+              const escapedPrayer = prayer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
               // Priority 1: Exact match (e.g. "Maghrib")
-              let azanAd = await AdItem.findOne({ title: { $regex: new RegExp(`^${prayer}$`, 'i') } });
+              let azanAd = await AdItem.findOne({ title: { $regex: new RegExp(`^${escapedPrayer}$`, 'i') } });
               
               // Priority 2: Loose match (e.g. "Maghrib Azan")
               if (!azanAd) {
-                azanAd = await AdItem.findOne({ title: { $regex: new RegExp(prayer, 'i') } });
+                azanAd = await AdItem.findOne({ title: { $regex: new RegExp(escapedPrayer, 'i') } });
               }
 
               if (azanAd) {

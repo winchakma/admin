@@ -17,6 +17,14 @@ const AdStateSchema = new mongoose.Schema({
     Asr: { type: Boolean, default: false },
     Maghrib: { type: Boolean, default: false },
     Isha: { type: Boolean, default: false }
+  },
+  azanDateFetched: String,
+  azanPlayedToday: {
+    Fajr: Boolean,
+    Zohr: Boolean,
+    Asr: Boolean,
+    Maghrib: Boolean,
+    Isha: Boolean
   }
 }, {
   timestamps: true

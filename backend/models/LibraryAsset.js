@@ -23,4 +23,6 @@ const LibraryAssetSchema = new mongoose.Schema({
   timestamps: true
 });
 
+LibraryAssetSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('LibraryAsset', LibraryAssetSchema);

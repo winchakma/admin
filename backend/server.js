@@ -1,8 +1,14 @@
 require('dotenv').config();
+
+if (!process.env.MONGO_URI) {
+  console.error("CRITICAL ERROR: MONGO_URI is missing in .env file. The server cannot start without a database.");
+  process.exit(1);
+}
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const connectDB = require('./config/db');
 const seedSuperAdmin = require('./seed');
@@ -13,18 +19,21 @@ const { startScheduler } = require('./scheduler');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
-  }
-});
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*';
+const corsOptions = {
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  maxAge: 86400 // Cache preflight for 24 hours
+};
+
+const io = socketIo(server, { cors: corsOptions });
 
 // Attach Socket.io instance to app for router access
 app.set('io', io);
 
 // Middleware
-app.use(cors());
+app.use(helmet({ crossOriginResourcePolicy: false })); // Allowed for stream serving
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
 // Serve uploaded media files

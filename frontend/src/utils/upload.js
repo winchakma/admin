@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
 
 // Upload a file in 5MB chunks
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB to be safe for slow internet and timeouts
@@ -44,10 +44,15 @@ export const uploadFileInChunks = async (file, onProgress) => {
         });
         chunkSuccess = true;
       } catch (error) {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+          window.dispatchEvent(new Event('unauthorized'));
+          throw new Error('Session expired');
+        }
         if (attempts >= 3) {
           throw error;
         }
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+        const delay = Math.pow(2, attempts - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay)); // Exponential backoff
       }
     }
 

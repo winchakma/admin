@@ -3,7 +3,9 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { promises: fsPromises } = require('fs');
 const { execFile } = require('child_process');
+const rateLimit = require('express-rate-limit');
 const Playlist = require('../models/Playlist');
 const AdItem = require('../models/AdItem');
 const AdState = require('../models/AdState');
@@ -13,6 +15,27 @@ const Overlay = require('../models/Overlay');
 const LibraryAsset = require('../models/LibraryAsset');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/role');
+
+// Cleanup old temp part files (runs once per hour)
+setInterval(async () => {
+  try {
+    const tempDir = path.join(__dirname, '../uploads/temp');
+    if (fs.existsSync(tempDir)) {
+      const files = await fsPromises.readdir(tempDir);
+      const now = Date.now();
+      for (const file of files) {
+        const filePath = path.join(tempDir, file);
+        const stats = await fsPromises.stat(filePath);
+        // Delete if older than 24 hours (86400000 ms)
+        if (now - stats.mtimeMs > 86400000) {
+          await fsPromises.unlink(filePath).catch(() => {});
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to cleanup temp uploads:', err);
+  }
+}, 3600000);
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -24,11 +47,16 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    cb(null, `${Date.now()}-${safeName}`);
   }
 });
 
 const upload = multer({ storage });
+const uploadImage = multer({ 
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit for images
+});
 
 // Helper to get video duration using ffprobe
 const getVideoDuration = (filePath) => {
@@ -59,14 +87,22 @@ const chunkStorage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}.part`);
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    cb(null, `${Date.now()}-${safeName}.part`);
   }
 });
 const uploadChunks = multer({ storage: chunkStorage });
 
-router.post('/upload/chunk', protect, uploadChunks.single('chunk'), async (req, res) => {
+const chunkUploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10000, // limit each IP to 10000 chunk uploads per window
+  message: { error: 'Too many chunks uploaded, please try again later.' }
+});
+
+router.post('/upload/chunk', protect, chunkUploadLimiter, uploadChunks.single('chunk'), async (req, res) => {
   try {
-    const { originalname, chunkIndex, totalChunks, uploadId } = req.body;
+    let { originalname, chunkIndex, totalChunks, uploadId } = req.body;
+    originalname = originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
     const chunkFile = req.file;
 
     if (!chunkFile) return res.status(400).json({ error: 'No chunk file provided' });
@@ -98,9 +134,9 @@ router.post('/upload/chunk', protect, uploadChunks.single('chunk'), async (req, 
     if (allChunksUploaded) {
       for (let i = 0; i < totalChunks; i++) {
         const partPath = path.join(finalUploadDir, `${uploadId}-${originalname}.part${i}`);
-        const chunkData = fs.readFileSync(partPath);
-        fs.appendFileSync(finalFilePath, chunkData);
-        fs.unlinkSync(partPath);
+        const chunkData = await fsPromises.readFile(partPath);
+        await fsPromises.appendFile(finalFilePath, chunkData);
+        await fsPromises.unlink(partPath).catch(() => {});
       }
       
       const duration = await getVideoDuration(finalFilePath);
@@ -127,7 +163,7 @@ router.get('/channels', async (req, res) => {
 });
 
 // Add a new channel
-router.post('/channels', protect, upload.single('logo'), async (req, res) => {
+router.post('/channels', protect, uploadImage.single('logo'), async (req, res) => {
   try {
     const { name, streamUrl, category } = req.body;
     if (!name || !streamUrl) {
@@ -202,9 +238,9 @@ router.delete('/channels/:id', protect, async (req, res) => {
 
     if (channel.logoPath) {
       const fullPath = path.join(__dirname, '..', channel.logoPath);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
+      try {
+        await fsPromises.unlink(fullPath);
+      } catch (e) {}
     }
 
     await Channel.findByIdAndDelete(req.params.id);
@@ -263,9 +299,9 @@ router.delete('/library/:id', protect, authorize('superadmin'), async (req, res)
 
     // Delete physical file
     const fullPath = path.join(__dirname, '..', item.filePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    try {
+      await fsPromises.unlink(fullPath);
+    } catch (e) {}
 
     await LibraryAsset.findByIdAndDelete(req.params.id);
     res.json({ message: 'Asset deleted' });
@@ -445,9 +481,9 @@ router.delete('/playlist/:id', protect, authorize('superadmin'), async (req, res
 
     // Delete physical file
     const fullPath = path.join(__dirname, '..', item.filePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    try {
+      await fsPromises.unlink(fullPath);
+    } catch (e) {}
 
     await Playlist.findByIdAndDelete(req.params.id);
     
@@ -511,7 +547,7 @@ router.post('/overlays', protect, async (req, res) => {
 });
 
 // Upload OTS Graphic Image
-router.post('/overlays/upload-ots', protect, upload.single('image'), async (req, res) => {
+router.post('/overlays/upload-ots', protect, uploadImage.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file uploaded' });
@@ -538,7 +574,7 @@ router.post('/overlays/upload-ots', protect, upload.single('image'), async (req,
 });
 
 // Upload Stream Logo Image
-router.post('/overlays/upload-logo', protect, upload.single('image'), async (req, res) => {
+router.post('/overlays/upload-logo', protect, uploadImage.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file uploaded' });
@@ -679,9 +715,9 @@ router.delete('/ads/:id', protect, async (req, res) => {
     }
 
     const fullPath = path.join(__dirname, '..', ad.filePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
+    try {
+      await fsPromises.unlink(fullPath);
+    } catch (e) {}
 
     await AdItem.findByIdAndDelete(req.params.id);
 

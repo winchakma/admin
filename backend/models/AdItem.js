@@ -18,4 +18,6 @@ const AdItemSchema = new mongoose.Schema({
   timestamps: true
 });
 
+AdItemSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model('AdItem', AdItemSchema);

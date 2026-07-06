@@ -94,6 +94,12 @@ function AdminPanel() {
   const socketRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
   const [ads, setAds] = useState([]);
   const [adTitle, setAdTitle] = useState('');
   const [isAdUploading, setIsAdUploading] = useState(false);
@@ -431,9 +437,9 @@ function AdminPanel() {
   };
 
   const handleRemoveAd = async (id) => {
-    setAds(ads.filter(item => item._id !== id));
     try {
       await apiFetch(`${SOCKET_URL}/api/ads/${id}`, { method: 'DELETE' });
+      setAds(prev => prev.filter(item => item._id !== id));
     } catch (err) {
       console.warn('Delete ad failed');
       fetchAds();
@@ -538,10 +544,9 @@ function AdminPanel() {
   };
 
   const handleRemoveVideo = async (id) => {
-    // Optimistic UI delete
-    setPlaylist(playlist.filter(item => item._id !== id));
     try {
       await apiFetch(`${SOCKET_URL}/api/playlist/${id}`, { method: 'DELETE' });
+      setPlaylist(prev => prev.filter(item => item._id !== id));
     } catch (err) {
       console.warn('Delete failed');
     }
@@ -738,7 +743,7 @@ function AdminPanel() {
                   {overlays.logoActive && (
                     <div className="absolute top-2.5 left-2.5 text-white font-extrabold text-[8px] sm:text-[10px] w-7 sm:w-10 rounded-lg z-20 overflow-hidden">
                       {overlays.logoImagePath ? (
-                        <img src={overlays.logoImagePath.startsWith('data:') ? overlays.logoImagePath : `${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="w-full h-auto block" />
+                        <img src={`${SOCKET_URL}/${overlays.logoImagePath.replace(/\\/g, '/')}`} alt="Logo" className="w-full h-auto block" />
                       ) : (
                         <div className="w-full aspect-square flex items-center justify-center">Logo</div>
                       )}
@@ -753,7 +758,7 @@ function AdminPanel() {
                     {/* OTS Overlay */}
                     {overlays.otsActive && overlays.otsImagePath && (
                       <div className="self-end w-7 sm:w-10 bg-[#111111] border border-gray-800 rounded shadow-md mb-1 pointer-events-auto overflow-hidden">
-                        <img src={overlays.otsImagePath.startsWith('data:') ? overlays.otsImagePath : `${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="w-full h-auto block" />
+                        <img src={`${SOCKET_URL}/${overlays.otsImagePath.replace(/\\/g, '/')}`} alt="OTS" className="w-full h-auto block" />
                       </div>
                     )}
 
@@ -771,7 +776,9 @@ function AdminPanel() {
                         {/* Ticker 1 Text */}
                         {overlays.ticker1Active && (
                           <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showDate ? '' : 'rounded-r-md'}`}>
-                            <marquee className="font-normal flex-1 text-white" scrollamount="2">{overlays.ticker1Text}</marquee>
+                            <div className="flex-1 overflow-hidden whitespace-nowrap relative">
+                              <div className="animate-marquee font-normal text-white inline-block">{overlays.ticker1Text}</div>
+                            </div>
                           </div>
                         )}
                         {overlays.showDate && (
@@ -794,12 +801,9 @@ function AdminPanel() {
                             </span>
                           </div>
                         )}
-                        {/* Ticker 2 Text */}
-                        {overlays.ticker2Active && (
-                          <div className={`flex-1 bg-black border border-l-0 border-gray-800 px-2 py-0.5 flex items-center overflow-hidden ${overlays.showTime ? '' : 'rounded-r-md'}`}>
-                            <marquee className="font-normal flex-1 text-white" scrollamount="2.5">{overlays.ticker2Text}</marquee>
-                          </div>
-                        )}
+                            <div className="flex-1 overflow-hidden whitespace-nowrap relative">
+                              <div className="animate-marquee font-normal text-white inline-block">{overlays.ticker2Text}</div>
+                            </div>
                         {/* Time Only Box */}
                         {overlays.showTime && (
                           <div className={`bg-black/90 backdrop-blur border border-l-0 border-gray-800 px-1 sm:px-2 py-0.5 w-[10%] sm:w-[8%] shrink-0 text-center font-mono flex items-center justify-center text-gray-300 text-[9px] sm:text-[10px] transition-opacity duration-500 overflow-hidden whitespace-nowrap ${!overlays.ticker2Active ? 'rounded border-l' : 'rounded-r'}`}>
