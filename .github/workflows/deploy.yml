@@ -18,8 +18,15 @@ jobs:
           script: |
             set -e
             cd /var/www/admin 
-            git reset --hard
-            git pull origin main
+            
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin https://github.com/winchakma/admin.git
+            fi
+            
+            git fetch origin
+            git reset --hard origin/main
+
             cd frontend
             npm install
             npm run build
