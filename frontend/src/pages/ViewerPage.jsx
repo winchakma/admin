@@ -186,10 +186,15 @@ const ViewerPage = () => {
             adPlayerRef.current.currentTime = targetOffset;
           }
         }
+        adPlayerRef.current.muted = isMuted;
+        adPlayerRef.current.volume = volume;
         adPlayerRef.current.play().catch(e => console.log("Autoplay blocked:", e));
       }
       if (currentEl) {
         currentEl.muted = true;
+      }
+      if (nextEl) {
+        nextEl.muted = true;
       }
       return;
     } else {
@@ -199,7 +204,12 @@ const ViewerPage = () => {
         adPlayerRef.current.load();
       }
       if (currentEl) {
-        currentEl.muted = isMuted; // Restore user's muted preference
+        currentEl.muted = isMuted;
+        currentEl.volume = volume;
+      }
+      if (nextEl) {
+        nextEl.muted = isMuted;
+        nextEl.volume = volume;
       }
     }
 
