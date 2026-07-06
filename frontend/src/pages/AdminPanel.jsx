@@ -679,7 +679,7 @@ function AdminPanel() {
         )}
 
         {activeTab === 'library' && (
-          <VideoLibrary setActiveTab={setActiveTab} />
+          <VideoLibrary setGlobalTab={setActiveTab} />
         )}
 
         {activeTab === 'admin' && (

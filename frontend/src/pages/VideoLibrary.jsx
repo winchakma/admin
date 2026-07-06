@@ -24,7 +24,7 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export default function VideoLibrary({ setActiveTab }) {
+export default function VideoLibrary({ setGlobalTab }) {
   const [libraryAssets, setLibraryAssets] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,11 +134,13 @@ export default function VideoLibrary({ setActiveTab }) {
     return true;
   });
 
-    <div className="flex-1 flex flex-col w-full h-full text-gray-300 font-sans antialiased overflow-y-auto">
+  return (
+    <>
+      <div className="flex-1 flex flex-col w-full h-full text-gray-300 font-sans antialiased overflow-y-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 max-w-7xl w-full mx-auto">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-wider flex items-center gap-3">
-              <button onClick={() => setActiveTab('admin')} className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors inline-block sm:hidden">
+              <button onClick={() => setGlobalTab('admin')} className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors inline-block sm:hidden">
                 <ArrowLeft className="w-5 h-5 text-white" />
               </button>
               VIDEO LIBRARY
@@ -154,7 +156,7 @@ export default function VideoLibrary({ setActiveTab }) {
               Upload Video
             </button>
             <button 
-              onClick={() => setActiveTab('admin')} 
+              onClick={() => setGlobalTab('admin')} 
               className="px-5 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm tracking-wide shadow-md transition-all flex items-center gap-2"
             >
               <Play className="w-4 h-4 fill-current" />
@@ -345,6 +347,6 @@ export default function VideoLibrary({ setActiveTab }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
