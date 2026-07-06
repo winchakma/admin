@@ -2,18 +2,19 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const path = require('path');
 const fs = require('fs');
+const { PassThrough } = require('stream');
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-let activeFfmpegCommand = null;
+let masterFfmpegCommand = null;
+let currentChildCommand = null;
+const streamPipe = new PassThrough();
 
 process.on('exit', () => {
-  if (activeFfmpegCommand) {
-    activeFfmpegCommand.kill('SIGKILL');
-  }
+  if (masterFfmpegCommand) masterFfmpegCommand.kill('SIGKILL');
+  if (currentChildCommand) currentChildCommand.kill('SIGKILL');
 });
 
-// Ensure stream data files exist so drawtext doesn't crash on startup
 const ensureStreamDataFiles = () => {
   const dataDir = path.join(__dirname, 'stream_data');
   if (!fs.existsSync(dataDir)) {
@@ -29,93 +30,106 @@ const ensureStreamDataFiles = () => {
   });
 };
 
-const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
-  stopFfmpegStream();
-  ensureStreamDataFiles();
-
-  const outputPath = path.join(__dirname, 'stream', 'live.m3u8');
+const startMasterFfmpeg = () => {
+  if (masterFfmpegCommand) return;
   
+  ensureStreamDataFiles();
+  const outputPath = path.join(__dirname, 'stream', 'live.m3u8');
   if (!fs.existsSync(path.join(__dirname, 'stream'))) {
     fs.mkdirSync(path.join(__dirname, 'stream'), { recursive: true });
   }
 
-  // Use relative paths for drawtext to avoid Windows absolute path escaping issues
-  const relFontPath = 'font.ttf';
-  const relTicker1 = 'stream_data/ticker1.txt';
+  masterFfmpegCommand = ffmpeg()
+    .input(streamPipe)
+    .inputFormat('mpegts')
+    .outputOptions([
+      '-c:v libx264',
+      '-preset ultrafast',
+      '-crf 28',
+      '-g 60',
+      '-sc_threshold 0',
+      '-threads 2',
+      '-c:a aac',
+      '-ar 44100',
+      '-f hls',
+      '-hls_time 4',
+      '-hls_list_size 20',
+      '-hls_flags delete_segments+append'
+    ])
+    .output(outputPath)
+    .on('start', (commandLine) => {
+      console.log('[Master Stream] Spawned continuous FFmpeg Master Pipeline');
+    })
+    .on('error', (err, stdout, stderr) => {
+      console.error('[Master Stream] Error:', err.message);
+      masterFfmpegCommand = null;
+      // Auto restart master stream
+      setTimeout(startMasterFfmpeg, 2000);
+    })
+    .on('end', () => {
+      console.log('[Master Stream] Ended. Restarting in 2s...');
+      masterFfmpegCommand = null;
+      setTimeout(startMasterFfmpeg, 2000);
+    });
+
+  masterFfmpegCommand.run();
+};
+
+const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
+  stopFfmpegStream();
+  
+  if (!masterFfmpegCommand) {
+    startMasterFfmpeg();
+  }
 
   const inputOpts = [
-    '-re' // Read input at native frame rate
+    '-re'
   ];
   
   if (offset > 0) {
     inputOpts.unshift(`-ss ${offset}`);
   }
 
-  activeFfmpegCommand = ffmpeg(inputVideoPath)
+  currentChildCommand = ffmpeg(inputVideoPath)
     .inputOptions(inputOpts)
-
     .complexFilter([
-      // Scale down to 720p to save CPU on large movies
       `[0:v:0]scale=-2:720[vout]`
     ])
     .outputOptions([
       '-map [vout]',
-      '-map 0:a:0?', // Map the first audio stream if it exists
+      '-map 0:a:0?',
       '-c:v libx264',
-      '-preset ultrafast', // Use ultrafast to prevent CPU lag on large files
+      '-preset ultrafast',
       '-crf 28',
-      '-g 60', // Force keyframes every 60 frames for consistent HLS segmenting
-      '-sc_threshold 0', // Disable scene detection to keep strict keyframes
-      '-threads 2', // Limit threads so Express can still serve files to web viewers
       '-c:a aac',
       '-ar 44100',
-      '-f hls',
-      '-hls_time 4',
-      '-hls_list_size 20',
-      '-hls_flags append+delete_segments'
+      '-f mpegts'
     ])
-    .output(outputPath)
     .on('start', (commandLine) => {
-      console.log('Spawned FFmpeg with command: ' + commandLine);
-      try {
-        fs.writeFileSync(path.join(__dirname, 'uploads', 'ffmpeg-debug.txt'), 'Spawned FFmpeg with command: ' + commandLine + '\\n\\n');
-      } catch(e) {}
+      console.log('[Child Stream] Pumping video into Master: ' + inputVideoPath);
     })
-    .on('error', (err, stdout, stderr) => {
-      if (err.message.includes('SIGKILL')) {
-        console.log('FFmpeg stream stopped (killed).');
-      } else {
-        console.error('FFmpeg Error:', err.message);
-        console.error('FFmpeg Stderr:', stderr);
-        try {
-          fs.appendFileSync(path.join(__dirname, 'uploads', 'ffmpeg-debug.txt'), 'Error: ' + err.message + '\\nStderr:\\n' + stderr + '\\n\\n');
-        } catch(e) {}
+    .on('error', (err) => {
+      if (!err.message.includes('SIGKILL')) {
+        console.error('[Child Stream] Error:', err.message);
         if (onCrash) onCrash();
-        
-        // Auto-restart logic after a crash
-        console.log('Auto-restarting FFmpeg stream in 5 seconds...');
-        setTimeout(() => {
-          if (!activeFfmpegCommand) {
-             startFfmpegStream(inputVideoPath, 0, onCrash);
-          }
-        }, 5000);
       }
     })
     .on('end', () => {
-      console.log('FFmpeg stream ended.');
+      console.log('[Child Stream] Finished pumping video.');
     });
 
-  activeFfmpegCommand.run();
+  currentChildCommand.pipe(streamPipe, { end: false });
 };
 
 const stopFfmpegStream = () => {
-  if (activeFfmpegCommand) {
-    activeFfmpegCommand.kill('SIGKILL');
-    activeFfmpegCommand = null;
+  if (currentChildCommand) {
+    currentChildCommand.kill('SIGKILL');
+    currentChildCommand = null;
   }
 };
 
 module.exports = {
+  startMasterFfmpeg,
   startFfmpegStream,
   stopFfmpegStream
 };
