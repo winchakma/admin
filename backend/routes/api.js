@@ -729,9 +729,12 @@ router.post('/ads/stop', protect, async (req, res) => {
       adState.activeAd = null;
       await adState.save();
 
-      // Shift StreamState forward by ad duration
-      // Live TV Style: We NO LONGER shift the clock. The movie plays naturally behind the Ad!
-    }
+      // Shift StreamState forward by ad duration to pause the movie during ad
+      const streamState = await StreamState.findOne();
+      if (streamState && streamState.currentVideoStartTime) {
+        streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (actualElapsed * 1000));
+        await streamState.save();
+      }
     res.json({ message: 'Ad stopped' });
   } catch (err) {
     res.status(500).json({ error: err.message });

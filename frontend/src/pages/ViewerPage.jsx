@@ -191,10 +191,10 @@ const ViewerPage = () => {
         adPlayerRef.current.play().catch(e => console.log("Autoplay blocked:", e));
       }
       if (currentEl) {
-        currentEl.muted = true;
+        currentEl.pause();
       }
       if (nextEl) {
-        nextEl.muted = true;
+        nextEl.pause();
       }
       return;
     } else {
@@ -288,6 +288,11 @@ const ViewerPage = () => {
       loadAndPlayVideo(currentEl, videoUrl, status.activeVideo.offset);
     } else {
       if (currentEl.readyState >= 1) {
+        const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
+        if (currentDiff > 5 && !currentEl.seeking) {
+           currentEl.currentTime = status.activeVideo.offset;
+        }
+
         if (currentEl.paused && !isPaused) {
           currentEl.play().catch(e => console.log("Autoplay blocked:", e));
         }

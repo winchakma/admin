@@ -189,7 +189,10 @@ function AdminPanel() {
         adPlayerRef.current.play().catch(e => console.log("Autoplay blocked:", e));
       }
       if (currentEl) {
-        currentEl.muted = true;
+        currentEl.pause();
+      }
+      if (nextEl) {
+        nextEl.pause();
       }
       return;
     } else {
@@ -279,7 +282,7 @@ function AdminPanel() {
     } else {
       if (currentEl.readyState >= 1) {
         const currentDiff = Math.abs(currentEl.currentTime - status.activeVideo.offset);
-        if (currentDiff > 30 && !currentEl.seeking) {
+        if (currentDiff > 5 && !currentEl.seeking) {
           const now = Date.now();
           if (!currentEl.dataset.lastSeek || now - parseInt(currentEl.dataset.lastSeek) > 10000) {
             currentEl.currentTime = status.activeVideo.offset;

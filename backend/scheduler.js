@@ -185,14 +185,20 @@ const startScheduler = (io) => {
           currentStatus.remainingTime = Math.max(0, Math.floor(adState.activeAd.duration - elapsed));
 
           io.emit('stream_status', currentStatus);
+          manageLocalPlayout(currentStatus.activeVideo, elapsed);
           return;
         } else {
           // Ad has finished playing, transition back to regular playlist
+          let actualElapsed = adState.activeAd.duration;
           adState.activeAd = null;
           await adState.save();
 
-          // Shift StreamState to perfectly resume
-          // Live TV Style: We NO LONGER shift the clock. The movie plays naturally behind the Ad!
+          // Shift StreamState forward to pause the movie during the ad
+          let streamState = await StreamState.findOne();
+          if (streamState && streamState.currentVideoStartTime) {
+            streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (actualElapsed * 1000));
+            await streamState.save();
+          }
         }
       }
 
@@ -241,11 +247,17 @@ const startScheduler = (io) => {
       // If the current video has finished playing naturally
       if (offset >= selectedItem.duration) {
         currentIndex = (currentIndex + 1) % playlist.length;
+        let oldSelectedItem = selectedItem;
         selectedItem = playlist[currentIndex];
         streamState.currentVideoId = selectedItem._id;
-        streamState.currentVideoStartTime = Date.now();
+        
+        if (offset > oldSelectedItem.duration + 30) {
+          streamState.currentVideoStartTime = Date.now();
+        } else {
+          streamState.currentVideoStartTime = new Date(new Date(streamState.currentVideoStartTime).getTime() + (oldSelectedItem.duration * 1000));
+        }
         await streamState.save();
-        offset = 0;
+        offset = (Date.now() - new Date(streamState.currentVideoStartTime).getTime()) / 1000;
       }
 
       let nextItem = playlist[(currentIndex + 1) % playlist.length];
