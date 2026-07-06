@@ -112,14 +112,23 @@ const ViewerPage = () => {
       setOverlays(prev => ({ ...prev, ...updatedOverlays }));
     });
 
-    fetch(`${SOCKET_URL}/api/overlays`)
+    const controller = new AbortController();
+    fetch(`${SOCKET_URL}/api/overlays`, { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
         if (data) setOverlays(prev => ({ ...prev, ...data }));
       })
-      .catch(err => console.warn('Overlay config offline'));
+      .catch(err => {
+        if (err.name !== 'AbortError') console.warn('Overlay config offline');
+      });
 
-    return () => s.disconnect();
+    return () => {
+      s.off('connect');
+      s.off('stream_status');
+      s.off('overlays_updated');
+      s.disconnect();
+      controller.abort();
+    };
   }, []);
 
   // Dual Video Playback & Sync Engine

@@ -29,7 +29,7 @@ const ensureStreamDataFiles = () => {
   });
 };
 
-const startFfmpegStream = (inputVideoPath, offset = 0) => {
+const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
   stopFfmpegStream();
   ensureStreamDataFiles();
 
@@ -98,6 +98,7 @@ const startFfmpegStream = (inputVideoPath, offset = 0) => {
         try {
           fs.appendFileSync(path.join(__dirname, 'uploads', 'ffmpeg-debug.txt'), 'Error: ' + err.message + '\\nStderr:\\n' + stderr + '\\n\\n');
         } catch(e) {}
+        if (onCrash) onCrash();
       }
     })
     .on('end', () => {

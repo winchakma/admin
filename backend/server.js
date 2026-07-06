@@ -9,6 +9,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
+const mongoose = require('mongoose');
 const path = require('path');
 const connectDB = require('./config/db');
 const seedSuperAdmin = require('./seed');
@@ -32,14 +34,35 @@ const io = socketIo(server, { cors: corsOptions });
 app.set('io', io);
 
 // Middleware
-app.use(helmet({ crossOriginResourcePolicy: false })); // Allowed for stream serving
+app.use(helmet({ 
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      mediaSrc: ["'self'", "blob:"],
+    },
+  },
+  frameguard: { action: 'deny' }, // X-Frame-Options
+})); // Allowed for stream serving
+app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
 // Serve uploaded media files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
 // Serve local stream outputs
-app.use('/stream', express.static(path.join(__dirname, 'stream')));
+app.use('/stream', express.static(path.join(__dirname, 'stream'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.m3u8')) {
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    } else if (filePath.endsWith('.ts')) {
+      res.setHeader('Content-Type', 'video/MP2T');
+    }
+  }
+}));
 
 // Connect Database and Seed
 connectDB().then(() => {
@@ -50,6 +73,9 @@ connectDB().then(() => {
 app.use('/api', apiRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Healthcheck
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime() }));
 
 // Socket.io connection logic
 io.on('connection', (socket) => {
@@ -83,3 +109,17 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
 });
+
+// Graceful Shutdown
+const shutdown = () => {
+  console.log('Shutting down gracefully...');
+  server.close(() => {
+    console.log('HTTP server closed.');
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed.');
+      process.exit(0);
+    });
+  });
+};
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { promises: fsPromises } = require('fs');
 const { execFile } = require('child_process');
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const Playlist = require('../models/Playlist');
 const AdItem = require('../models/AdItem');
@@ -48,14 +49,37 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
-    cb(null, `${Date.now()}-${safeName}`);
+    cb(null, `${Date.now()}-${crypto.randomUUID()}-${safeName}`);
   }
 });
 
-const upload = multer({ storage });
+const videoFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['video/mp4', 'video/x-matroska', 'video/webm', 'video/quicktime'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid video file type'), false);
+  }
+};
+
+const imageFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid image file type'), false);
+  }
+};
+
+const upload = multer({ 
+  storage,
+  fileFilter: videoFileFilter
+});
+
 const uploadImage = multer({ 
   storage,
-  limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit for images
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit for images
+  fileFilter: imageFileFilter
 });
 
 // Helper to get video duration using ffprobe
@@ -178,6 +202,8 @@ router.post('/channels', protect, uploadImage.single('logo'), async (req, res) =
     const lastItem = await Channel.findOne().sort('-orderIndex');
     const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
 
+    if (category && category.length > 50) return res.status(400).json({ error: 'Category too long' });
+
     const newChannel = new Channel({
       name,
       streamUrl,
@@ -196,7 +222,11 @@ router.post('/channels', protect, uploadImage.single('logo'), async (req, res) =
 
     res.status(201).json(newChannel);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    if (req.file) {
+      const fullPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+      fsPromises.unlink(fullPath).catch(() => {});
+    }
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -236,7 +266,7 @@ router.delete('/channels/:id', protect, async (req, res) => {
       return res.status(404).json({ error: 'Channel not found' });
     }
 
-    if (channel.logoPath) {
+    if (channel.logoPath && !channel.logoPath.includes('..')) {
       const fullPath = path.join(__dirname, '..', channel.logoPath);
       try {
         await fsPromises.unlink(fullPath);
@@ -275,6 +305,8 @@ router.post('/library/upload', protect, upload.none(), async (req, res) => {
     const { title, category, filePath, duration } = req.body;
     if (!filePath) return res.status(400).json({ error: 'No file path provided' });
 
+    if (category && category.length > 50) return res.status(400).json({ error: 'Category too long' });
+
     const newAsset = new LibraryAsset({
       title: title || 'Untitled',
       filePath,
@@ -297,11 +329,13 @@ router.delete('/library/:id', protect, authorize('superadmin'), async (req, res)
       return res.status(404).json({ error: 'Library asset not found' });
     }
 
-    // Delete physical file
-    const fullPath = path.join(__dirname, '..', item.filePath);
-    try {
-      await fsPromises.unlink(fullPath);
-    } catch (e) {}
+    // Delete physical file securely
+    if (item.filePath && !item.filePath.includes('..')) {
+      const fullPath = path.join(__dirname, '..', item.filePath);
+      try {
+        await fsPromises.unlink(fullPath);
+      } catch (e) {}
+    }
 
     await LibraryAsset.findByIdAndDelete(req.params.id);
     res.json({ message: 'Asset deleted' });
@@ -347,11 +381,13 @@ router.post('/playlist', protect, async (req, res) => {
     const lastItem = await Playlist.findOne().sort('-orderIndex');
     const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
 
+    if (category && category.length > 50) return res.status(400).json({ error: 'Category too long' });
+
     const newItem = new Playlist({
       title: title || 'External Live Stream',
       filePath: videoUrl, // Save URL in the path field
       duration: duration || 3600, // Default to 1 hour
-      category: req.body.category || 'News',
+      category: category || 'News',
       orderIndex,
       status: 'active'
     });
@@ -379,6 +415,8 @@ router.post('/playlist/upload', protect, authorize('superadmin'), upload.none(),
     // Get highest orderIndex to place this at the end
     const lastItem = await Playlist.findOne().sort('-orderIndex');
     const orderIndex = lastItem ? lastItem.orderIndex + 1 : 0;
+
+    if (category && category.length > 50) return res.status(400).json({ error: 'Category too long' });
 
     const newItem = new Playlist({
       title: title || 'Untitled',
@@ -479,11 +517,13 @@ router.delete('/playlist/:id', protect, authorize('superadmin'), async (req, res
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    // Delete physical file
-    const fullPath = path.join(__dirname, '..', item.filePath);
-    try {
-      await fsPromises.unlink(fullPath);
-    } catch (e) {}
+    // Delete physical file securely
+    if (item.filePath && !item.filePath.includes('..')) {
+      const fullPath = path.join(__dirname, '..', item.filePath);
+      try {
+        await fsPromises.unlink(fullPath);
+      } catch (e) {}
+    }
 
     await Playlist.findByIdAndDelete(req.params.id);
     
@@ -714,10 +754,12 @@ router.delete('/ads/:id', protect, async (req, res) => {
       return res.status(404).json({ error: 'Ad not found' });
     }
 
-    const fullPath = path.join(__dirname, '..', ad.filePath);
-    try {
-      await fsPromises.unlink(fullPath);
-    } catch (e) {}
+    if (ad.filePath && !ad.filePath.includes('..')) {
+      const fullPath = path.join(__dirname, '..', ad.filePath);
+      try {
+        await fsPromises.unlink(fullPath);
+      } catch (e) {}
+    }
 
     await AdItem.findByIdAndDelete(req.params.id);
 
@@ -736,4 +778,4 @@ router.delete('/ads/:id', protect, async (req, res) => {
 module.exports = router;
 
 // Dummy settings endpoint
-router.get('/settings', (req, res) => res.json({}));
+router.get('/settings', protect, authorize('superadmin'), (req, res) => res.json({}));

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
+    mongoose.set('strictQuery', false);
     const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/iptv_broadcast');
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {

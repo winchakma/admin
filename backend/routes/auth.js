@@ -31,15 +31,17 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
+    const trimmedEmail = email.toLowerCase().trim();
+
     // Check if email exists in InvitedEmail
-    const isInvited = await InvitedEmail.findOne({ email: email.toLowerCase() });
+    const isInvited = await InvitedEmail.findOne({ email: trimmedEmail });
     
     if (!isInvited) {
       return res.status(403).json({ success: false, message: 'This email is not authorized to register.' });
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await User.findOne({ email: trimmedEmail });
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'User already exists' });
     }
@@ -50,7 +52,7 @@ router.post('/register', async (req, res) => {
 
     // Create user
     const user = await User.create({
-      email,
+      email: trimmedEmail,
       password: hashedPassword,
       role: 'admin' // Only standard admins can be registered via invite. Superadmins are seeded.
     });
@@ -87,7 +89,9 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const trimmedEmail = email.toLowerCase().trim();
+
+    const user = await User.findOne({ email: trimmedEmail });
     if (!user || !user.password) {
       return res.status(401).json({ success: false, message: 'Invalid credentials or missing password' });
     }

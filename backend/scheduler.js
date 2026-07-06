@@ -81,6 +81,8 @@ let currentStatus = {
 
 let cachedPlaylist = [];
 let lastPlaylistFetch = 0;
+let lastErrorMsg = '';
+let schedulerFailures = 0;
 
 // Start the scheduler
 const startScheduler = (io) => {
@@ -278,8 +280,16 @@ const startScheduler = (io) => {
       // Manage local FFmpeg playout for raw .m3u8 access
       manageLocalPlayout(selectedItem, offset);
 
+      // Reset on success inside try block
+      schedulerFailures = 0;
+      lastErrorMsg = '';
+
     } catch (err) {
-      console.error('Scheduler error:', err.message);
+      schedulerFailures++;
+      if (err.message !== lastErrorMsg || schedulerFailures % 60 === 0) {
+        console.error(`Scheduler error (failures: ${schedulerFailures}):`, err.message);
+        lastErrorMsg = err.message;
+      }
     }
   }, 1000);
 };
@@ -316,7 +326,10 @@ const manageLocalPlayout = (selectedItem, offset) => {
   }
 
   console.log(`[FFmpeg CG] Starting broadcast stream for: ${selectedItem.title}`);
-  startFfmpegStream(inputVideoPath);
+  startFfmpegStream(inputVideoPath, offset, () => {
+    console.log('[FFmpeg CG] Crash detected. Resetting stream state.');
+    currentFfmpegVideoId = null;
+  });
 };
 
 module.exports = { startScheduler };

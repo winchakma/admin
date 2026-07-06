@@ -309,6 +309,17 @@ function AdminPanel() {
     }
   }, [status.activeVideo, activeTab, previewActivePlayer, publicActivePlayer]);
 
+  useEffect(() => {
+    return () => {
+      [previewVideo1Ref, previewVideo2Ref, previewAdRef, publicVideo1Ref, publicVideo2Ref, publicAdRef].forEach(ref => {
+        if (ref.current) {
+          ref.current.removeAttribute('src');
+          ref.current.load();
+        }
+      });
+    };
+  }, []);
+
   const handlePlayUnmute = () => {
     setIsMuted(false);
     const prev1 = previewActivePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current;

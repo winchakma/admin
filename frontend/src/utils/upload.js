@@ -7,7 +7,7 @@ const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB to be safe for slow internet and time
 
 export const uploadFileInChunks = async (file, onProgress) => {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  const uploadId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+  const uploadId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).substring(2);
   let uploadResult = null;
 
   for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
