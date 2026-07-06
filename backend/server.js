@@ -19,9 +19,16 @@ app.set('trust proxy', true);
 const server = http.createServer(app);
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*';
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, origin || '*'); // Return exactly the origin for credentials: true
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  maxAge: 86400 // Cache preflight for 24 hours
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 const io = socketIo(server, { cors: corsOptions });
@@ -46,9 +53,14 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
-// Serve uploaded media files securely using Dual-Token system
+// Serve uploaded media files securely using Dual-Token system (Query or Cookie)
 app.use('/uploads', (req, res, next) => {
-  const token = req.query.token;
+  let token = req.query.token;
+  
+  if (!token && req.headers.cookie) {
+    const cookies = Object.fromEntries(req.headers.cookie.split('; ').map(c => c.split('=')));
+    token = cookies['viewer_token'];
+  }
 
   if (!token) {
     return res.status(401).send('Vault Access Denied: No token provided.');

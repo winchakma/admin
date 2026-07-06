@@ -18,7 +18,7 @@ const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/role');
 const jwt = require('jsonwebtoken');
 
-// Generate temporary viewer token
+// Generate temporary viewer token as a cookie
 router.get('/viewer-token', (req, res) => {
   const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
   const token = jwt.sign(
@@ -26,7 +26,13 @@ router.get('/viewer-token', (req, res) => {
     process.env.JWT_SECRET || 'fallback_secret_key_change_in_production',
     { expiresIn: '3h' } // Token expires in 3 hours
   );
-  res.json({ token });
+  res.cookie('viewer_token', token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 3 * 60 * 60 * 1000
+  });
+  res.json({ success: true });
 });
 
 // Cleanup old temp part files (runs once per hour)

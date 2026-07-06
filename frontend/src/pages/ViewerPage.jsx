@@ -20,8 +20,6 @@ const ViewerPage = () => {
   const wrapperRef = useRef(null);
   const socketRef = useRef(null);
   const currentVideoIdRef = useRef(null);
-  const [viewerToken, setViewerToken] = useState(null);
-
   const [overlays, setOverlays] = useState({
     ticker1Text: '',
     ticker1Title: '',
@@ -132,15 +130,9 @@ const ViewerPage = () => {
     };
   }, []);
 
-  // Fetch viewer token on mount
+  // Fetch viewer token on mount to set the HttpOnly cookie
   useEffect(() => {
-    fetch(`${SOCKET_URL}/api/viewer-token`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.token) {
-          setViewerToken(data.token);
-        }
-      })
+    fetch(`${SOCKET_URL}/api/viewer-token`, { credentials: 'include' })
       .catch(err => console.warn('Failed to fetch viewer token', err));
   }, []);
 
@@ -172,10 +164,6 @@ const ViewerPage = () => {
     let videoUrl = normalizedPath.startsWith('http://') || normalizedPath.startsWith('https://')
       ? normalizedPath
       : `${SOCKET_URL}/${normalizedPath}`;
-      
-    if (viewerToken && !videoUrl.includes('?token=')) {
-      videoUrl += `?token=${viewerToken}`;
-    }
 
     const loadAndPlayVideo = (element, url, offset) => {
       element.src = url;
@@ -247,7 +235,6 @@ const ViewerPage = () => {
         if (status.nextVideo) {
           const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
           let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-          if (viewerToken) nextUrl += `?token=${viewerToken}`;
           currentEl.pause();
           currentEl.src = nextUrl;
           currentEl.load();
@@ -273,7 +260,6 @@ const ViewerPage = () => {
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
             let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-            if (viewerToken) nextUrl += `?token=${viewerToken}`;
             setTimeout(() => {
               currentEl.pause();
               currentEl.src = nextUrl;
@@ -320,7 +306,6 @@ const ViewerPage = () => {
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
         let nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-        if (viewerToken) nextUrl += `?token=${viewerToken}`;
         if (nextEl.getAttribute('src') !== nextUrl) {
           nextEl.pause();
           nextEl.src = nextUrl;
@@ -384,18 +369,21 @@ const ViewerPage = () => {
             <div className={`absolute inset-0 w-full h-full ${status.activeVideo && overlays.isBroadcastActive ? 'block' : 'hidden'}`}>
               <video 
                 ref={video1Ref} 
+                crossOrigin="use-credentials"
                 className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(activePlayer === 1 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
               <video 
                 ref={video2Ref} 
+                crossOrigin="use-credentials"
                 className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${(activePlayer === 2 && !status.activeVideo?.isAd) ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
               />
               <video 
                 ref={adPlayerRef} 
+                crossOrigin="use-credentials"
                 className={`absolute inset-0 w-full h-full object-contain bg-black transition-opacity duration-300 ${status.activeVideo?.isAd ? 'opacity-100 z-20' : 'opacity-0 z-0 pointer-events-none'}`} 
                 playsInline 
                 muted={isMuted}
