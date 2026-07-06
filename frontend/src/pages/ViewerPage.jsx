@@ -175,8 +175,8 @@ const ViewerPage = () => {
 
     if (status.activeVideo.isAd) {
       if (adPlayerRef.current) {
-        const adSrcUrl = decodeURI(adPlayerRef.current.src);
-        if (!adPlayerRef.current.hasAttribute('src') || (!adSrcUrl.endsWith(videoUrl.split('?')[0]) && adSrcUrl !== videoUrl)) {
+        const currentSrc = adPlayerRef.current.getAttribute('src');
+        if (currentSrc !== videoUrl) {
           adPlayerRef.current.src = videoUrl;
           adPlayerRef.current.load();
         }
@@ -216,7 +216,8 @@ const ViewerPage = () => {
     if (currentVideoIdRef.current !== status.activeVideo.id) {
       currentVideoIdRef.current = status.activeVideo.id;
       
-      if (nextEl.hasAttribute('src') && (decodeURI(nextEl.src).endsWith(videoUrl.split('?')[0]) || decodeURI(nextEl.src) === videoUrl)) {
+      const nextCurrentSrc = nextEl.getAttribute('src');
+      if (nextCurrentSrc === videoUrl) {
         if (nextEl.readyState >= 1) {
           const targetOffset = status.activeVideo.offset || 0;
           if (Math.abs(nextEl.currentTime - targetOffset) > 1) {
@@ -295,7 +296,7 @@ const ViewerPage = () => {
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
         const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-        if (!nextEl.hasAttribute('src') || (!decodeURI(nextEl.src).endsWith(nextUrl.split('?')[0]) && decodeURI(nextEl.src) !== nextUrl)) {
+        if (nextEl.getAttribute('src') !== nextUrl) {
           nextEl.pause();
           nextEl.src = nextUrl;
           nextEl.load();
@@ -316,15 +317,26 @@ const ViewerPage = () => {
     };
   }, [status.activeVideo, overlays.isBroadcastActive, activePlayer, isPaused]); 
 
+  const getPlayingElement = () => {
+    if (status.activeVideo?.isAd) return adPlayerRef.current;
+    return activePlayer === 1 ? video1Ref.current : video2Ref.current;
+  };
+
   const handlePlayUnmute = () => {
     setIsMuted(false);
     setIsPaused(false);
-    const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
-    if (currentEl) {
-      currentEl.play().catch(err => console.log(err));
-      currentEl.muted = false;
-      currentEl.volume = volume;
-    }
+    
+    // Unlock all video elements for unmuted autoplay
+    [video1Ref, video2Ref, adPlayerRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.muted = false;
+        ref.current.volume = volume;
+        const p = ref.current.play();
+        if (p !== undefined) {
+          p.catch(() => {});
+        }
+      }
+    });
   };
 
   return (
@@ -459,7 +471,7 @@ const ViewerPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <button onClick={() => {
-                        const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                        const currentEl = getPlayingElement();
                         if (currentEl) {
                           if (isPaused) {
                             currentEl.play();
@@ -475,7 +487,7 @@ const ViewerPage = () => {
                       
                       <div className="flex items-center space-x-2 group/volume relative">
                         <button onClick={() => {
-                          const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                          const currentEl = getPlayingElement();
                           if (currentEl) {
                             if (isMuted) {
                               currentEl.muted = false;
@@ -497,7 +509,7 @@ const ViewerPage = () => {
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
                             setVolume(val);
-                            const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                            const currentEl = getPlayingElement();
                             if (currentEl) {
                               currentEl.volume = val;
                               currentEl.muted = val === 0;
@@ -510,7 +522,7 @@ const ViewerPage = () => {
 
                       <button 
                         onClick={() => {
-                          const currentEl = activePlayer === 1 ? video1Ref.current : video2Ref.current;
+                          const currentEl = getPlayingElement();
                           if (currentEl && status.activeVideo) {
                             currentEl.currentTime = status.activeVideo.offset;
                             currentEl.play().catch(e => console.log(e));

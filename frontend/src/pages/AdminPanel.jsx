@@ -175,8 +175,8 @@ function AdminPanel() {
 
     if (status.activeVideo.isAd) {
       if (adPlayerRef.current) {
-        const adSrcUrl = decodeURI(adPlayerRef.current.src);
-        if (!adPlayerRef.current.hasAttribute('src') || (!adSrcUrl.endsWith(videoUrl.split('?')[0]) && adSrcUrl !== videoUrl)) {
+        const currentSrc = adPlayerRef.current.getAttribute('src');
+        if (currentSrc !== videoUrl) {
           adPlayerRef.current.src = videoUrl;
           adPlayerRef.current.load();
         }
@@ -206,7 +206,8 @@ function AdminPanel() {
     if (currentVideoIdRef.current !== status.activeVideo.id) {
       currentVideoIdRef.current = status.activeVideo.id;
       
-      if (nextEl.hasAttribute('src') && (decodeURI(nextEl.src).endsWith(videoUrl.split('?')[0]) || decodeURI(nextEl.src) === videoUrl)) {
+      const nextCurrentSrc = nextEl.getAttribute('src');
+      if (nextCurrentSrc === videoUrl) {
         if (nextEl.readyState >= 1) {
           const targetOffset = status.activeVideo.offset || 0;
           if (Math.abs(nextEl.currentTime - targetOffset) > 1) {
@@ -293,7 +294,7 @@ function AdminPanel() {
       if (status.nextVideo) {
         const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
         const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-        if (!nextEl.hasAttribute('src') || (!decodeURI(nextEl.src).endsWith(nextUrl.split('?')[0]) && decodeURI(nextEl.src) !== nextUrl)) {
+        if (nextEl.getAttribute('src') !== nextUrl) {
           nextEl.pause();
           nextEl.src = nextUrl;
           nextEl.load();
@@ -324,8 +325,17 @@ function AdminPanel() {
 
   const handlePlayUnmute = () => {
     setIsMuted(false);
-    const prev1 = previewActivePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current;
-    if (prev1) prev1.play().catch(e => console.log(e));
+    
+    // Unlock all video elements for unmuted autoplay
+    [previewVideo1Ref, previewVideo2Ref, previewAdRef].forEach(ref => {
+      if (ref.current) {
+        ref.current.muted = false;
+        const p = ref.current.play();
+        if (p !== undefined) {
+          p.catch(() => {});
+        }
+      }
+    });
   };
 
   // Connect Socket.io
