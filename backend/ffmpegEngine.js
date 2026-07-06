@@ -2,17 +2,42 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const path = require('path');
 const fs = require('fs');
-const { PassThrough } = require('stream');
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
-let masterFfmpegCommand = null;
-let currentChildCommand = null;
-const streamPipe = new PassThrough();
+let activeFfmpegCommand = null;
+let watcherInterval = null;
+
+// Stitcher state
+let globalSequence = 0;
+let masterSegments = [];
+let discontinuityNext = false;
+let lastSeenSegment = '';
+let isFirstBoot = true;
+
+const streamDir = path.join(__dirname, 'stream');
+const tempDir = path.join(__dirname, 'stream_temp');
+
+// Clean directories on startup
+if (fs.existsSync(streamDir)) {
+  fs.readdirSync(streamDir).forEach(f => {
+    if (f.endsWith('.ts') || f.endsWith('.m3u8')) fs.unlinkSync(path.join(streamDir, f));
+  });
+} else {
+  fs.mkdirSync(streamDir, { recursive: true });
+}
+
+if (fs.existsSync(tempDir)) {
+  fs.readdirSync(tempDir).forEach(f => {
+    if (f.endsWith('.ts') || f.endsWith('.m3u8')) fs.unlinkSync(path.join(tempDir, f));
+  });
+} else {
+  fs.mkdirSync(tempDir, { recursive: true });
+}
 
 process.on('exit', () => {
-  if (masterFfmpegCommand) masterFfmpegCommand.kill('SIGKILL');
-  if (currentChildCommand) currentChildCommand.kill('SIGKILL');
+  if (activeFfmpegCommand) activeFfmpegCommand.kill('SIGKILL');
+  if (watcherInterval) clearInterval(watcherInterval);
 });
 
 const ensureStreamDataFiles = () => {
@@ -30,70 +55,102 @@ const ensureStreamDataFiles = () => {
   });
 };
 
-const startMasterFfmpeg = () => {
-  if (masterFfmpegCommand) return;
+const writeMasterM3u8 = () => {
+  const masterLines = [
+    '#EXTM3U',
+    '#EXT-X-VERSION:3',
+    '#EXT-X-TARGETDURATION:5',
+    `#EXT-X-MEDIA-SEQUENCE:${Math.max(0, globalSequence - masterSegments.length)}`
+  ];
   
-  ensureStreamDataFiles();
-  const outputPath = path.join(__dirname, 'stream', 'live.m3u8');
-  if (!fs.existsSync(path.join(__dirname, 'stream'))) {
-    fs.mkdirSync(path.join(__dirname, 'stream'), { recursive: true });
+  masterSegments.forEach(seg => {
+    if (seg.discontinuity) masterLines.push('#EXT-X-DISCONTINUITY');
+    masterLines.push(`#EXTINF:${seg.duration},`);
+    masterLines.push(seg.filename);
+  });
+  
+  const m3u8Path = path.join(streamDir, 'live.m3u8');
+  fs.writeFileSync(m3u8Path, masterLines.join('\n') + '\n');
+};
+
+const pollTempM3u8 = () => {
+  const tempM3u8Path = path.join(tempDir, 'live.m3u8');
+  if (!fs.existsSync(tempM3u8Path)) return;
+
+  try {
+    const content = fs.readFileSync(tempM3u8Path, 'utf8');
+    const lines = content.split('\n');
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('#EXTINF:')) {
+        const duration = parseFloat(lines[i].split(':')[1].split(',')[0]);
+        const filename = lines[i+1].trim();
+        
+        if (filename && filename !== lastSeenSegment) {
+          const tempTsPath = path.join(tempDir, filename);
+          if (!fs.existsSync(tempTsPath)) continue;
+
+          lastSeenSegment = filename;
+          
+          const newFilename = `master_${globalSequence}.ts`;
+          const finalTsPath = path.join(streamDir, newFilename);
+          
+          fs.copyFileSync(tempTsPath, finalTsPath);
+          
+          masterSegments.push({
+            duration,
+            filename: newFilename,
+            discontinuity: discontinuityNext
+          });
+          
+          globalSequence++;
+          discontinuityNext = false;
+          
+          if (masterSegments.length > 20) {
+            const removed = masterSegments.shift();
+            const oldFile = path.join(streamDir, removed.filename);
+            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+          }
+          
+          writeMasterM3u8();
+        }
+      }
+    }
+  } catch(e) {
+    // Ignore read errors during FFmpeg writes
   }
-
-  masterFfmpegCommand = ffmpeg()
-    .input(streamPipe)
-    .inputFormat('mpegts')
-    .inputOptions([
-      '-use_wallclock_as_timestamps 1'
-    ])
-    .outputOptions([
-      '-c:v libx264',
-      '-preset ultrafast',
-      '-crf 28',
-      '-g 60',
-      '-sc_threshold 0',
-      '-threads 2',
-      '-c:a aac',
-      '-ar 44100',
-      '-f hls',
-      '-hls_time 4',
-      '-hls_list_size 20',
-      '-hls_flags delete_segments'
-    ])
-    .output(outputPath)
-    .on('start', (commandLine) => {
-      console.log('[Master Stream] Spawned continuous FFmpeg Master Pipeline');
-    })
-    .on('error', (err, stdout, stderr) => {
-      console.error('[Master Stream] Error:', err.message);
-      masterFfmpegCommand = null;
-      // Auto restart master stream
-      setTimeout(startMasterFfmpeg, 2000);
-    })
-    .on('end', () => {
-      console.log('[Master Stream] Ended. Restarting in 2s...');
-      masterFfmpegCommand = null;
-      setTimeout(startMasterFfmpeg, 2000);
-    });
-
-  masterFfmpegCommand.run();
 };
 
 const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
   stopFfmpegStream();
+  ensureStreamDataFiles();
   
-  if (!masterFfmpegCommand) {
-    startMasterFfmpeg();
+  if (!isFirstBoot) {
+    discontinuityNext = true;
   }
+  isFirstBoot = false;
 
+  // Clear temp directory so old TS files don't confuse the parser
+  if (fs.existsSync(tempDir)) {
+    fs.readdirSync(tempDir).forEach(f => {
+      if (f.endsWith('.ts') || f.endsWith('.m3u8')) fs.unlinkSync(path.join(tempDir, f));
+    });
+  }
+  
+  // reset lastSeenSegment because temp directory is cleared
+  lastSeenSegment = '';
+
+  const outputPath = path.join(tempDir, 'live.m3u8');
+  
   const inputOpts = [
-    '-re'
+    '-re' 
   ];
   
   if (offset > 0) {
     inputOpts.unshift(`-ss ${offset}`);
   }
 
-  currentChildCommand = ffmpeg(inputVideoPath)
+  activeFfmpegCommand = ffmpeg(inputVideoPath)
     .inputOptions(inputOpts)
     .complexFilter([
       `[0:v:0]scale=-2:720[vout]`
@@ -104,36 +161,44 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
       '-c:v libx264',
       '-preset ultrafast',
       '-crf 28',
-      '-r 30',
+      '-g 60', 
+      '-sc_threshold 0',
+      '-threads 2',
       '-c:a aac',
       '-ar 44100',
-      '-f mpegts'
+      '-f hls',
+      '-hls_time 4',
+      '-hls_list_size 5',
+      '-hls_flags delete_segments'
     ])
+    .output(outputPath)
     .on('start', (commandLine) => {
-      console.log('[Child Stream] Pumping video into Master: ' + inputVideoPath);
+      console.log('Spawned FFmpeg stitcher child: ' + inputVideoPath);
+      if (!watcherInterval) {
+        watcherInterval = setInterval(pollTempM3u8, 1000);
+      }
     })
     .on('error', (err) => {
       if (!err.message.includes('SIGKILL')) {
-        console.error('[Child Stream] Error:', err.message);
+        console.error('FFmpeg Error:', err.message);
         if (onCrash) onCrash();
       }
     })
     .on('end', () => {
-      console.log('[Child Stream] Finished pumping video.');
+      console.log('FFmpeg stream ended naturally.');
     });
 
-  currentChildCommand.pipe(streamPipe, { end: false });
+  activeFfmpegCommand.run();
 };
 
 const stopFfmpegStream = () => {
-  if (currentChildCommand) {
-    currentChildCommand.kill('SIGKILL');
-    currentChildCommand = null;
+  if (activeFfmpegCommand) {
+    activeFfmpegCommand.kill('SIGKILL');
+    activeFfmpegCommand = null;
   }
 };
 
 module.exports = {
-  startMasterFfmpeg,
   startFfmpegStream,
   stopFfmpegStream
 };
