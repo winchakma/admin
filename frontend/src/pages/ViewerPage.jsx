@@ -238,6 +238,8 @@ const ViewerPage = () => {
           currentEl.pause();
           currentEl.src = nextUrl;
           currentEl.load();
+        } else {
+          currentEl.pause(); // Anti-ghosting: pause old video if no next video
         }
       } else {
         nextEl.src = videoUrl;
@@ -265,6 +267,10 @@ const ViewerPage = () => {
               currentEl.src = nextUrl;
               currentEl.load();
             }, 350);
+          } else {
+            setTimeout(() => {
+              currentEl.pause(); // Anti-ghosting: pause old video if no next video
+            }, 350);
           }
         };
         nextEl.oncanplay = onReady;
@@ -286,6 +292,9 @@ const ViewerPage = () => {
 
           setActivePlayer(activePlayer === 1 ? 2 : 1);
           nextEl.play().catch(e=>console.log(e));
+          setTimeout(() => {
+            currentEl.pause(); // Anti-ghosting: pause old video on fallback swap
+          }, 350);
         }, 5000);
       }
     } else if (!currentEl.hasAttribute('src')) {
@@ -310,7 +319,11 @@ const ViewerPage = () => {
           nextEl.pause();
           nextEl.src = nextUrl;
           nextEl.load();
+        } else {
+          if (!nextEl.paused) nextEl.pause(); // Anti-ghosting
         }
+      } else {
+        if (!nextEl.paused) nextEl.pause(); // Anti-ghosting
       }
     }
     
