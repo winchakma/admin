@@ -1,9 +1,4 @@
 require('dotenv').config();
-
-if (!process.env.MONGO_URI) {
-  console.error("CRITICAL ERROR: MONGO_URI is missing in .env file. The server cannot start without a database.");
-  process.exit(1);
-}
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
