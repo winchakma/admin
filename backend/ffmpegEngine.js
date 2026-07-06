@@ -64,7 +64,7 @@ const writeMasterM3u8 = () => {
   
   masterSegments.forEach(seg => {
     if (seg.discontinuity) masterLines.push('#EXT-X-DISCONTINUITY');
-    masterLines.push(`#EXTINF:${seg.duration},`);
+    masterLines.push(`#EXTINF:${seg.duration.toFixed(6)},`);
     masterLines.push(seg.filename);
   });
   
@@ -181,7 +181,7 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
     .on('start', (commandLine) => {
       console.log('Spawned FFmpeg stitcher child: ' + inputVideoPath);
       if (!watcherInterval) {
-        watcherInterval = setInterval(pollTempM3u8, 1000);
+        watcherInterval = setInterval(pollTempM3u8, 100);
       }
     })
     .on('error', (err) => {
