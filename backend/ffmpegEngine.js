@@ -43,6 +43,8 @@ const startMasterFfmpeg = () => {
     .input(streamPipe)
     .inputFormat('mpegts')
     .outputOptions([
+      '-vf setpts=N/30/TB',
+      '-af asetpts=N/44100/TB',
       '-c:v libx264',
       '-preset ultrafast',
       '-crf 28',
@@ -101,6 +103,7 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
       '-c:v libx264',
       '-preset ultrafast',
       '-crf 28',
+      '-r 30',
       '-c:a aac',
       '-ar 44100',
       '-f mpegts'
