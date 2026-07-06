@@ -5,6 +5,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const path = require('path');
+const helmet = require('helmet');
 const connectDB = require('./config/db');
 const seedSuperAdmin = require('./seed');
 const apiRoutes = require('./routes/api');
@@ -27,6 +28,19 @@ const io = socketIo(server, { cors: corsOptions });
 app.set('io', io);
 
 // Middleware
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "*"],
+      mediaSrc: ["'self'", "*"],
+      imgSrc: ["'self'", "data:", "*"]
+    }
+  }
+}));
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
