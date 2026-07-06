@@ -35,15 +35,7 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
 
   const outputPath = path.join(__dirname, 'stream', 'live.m3u8');
   
-  // Clean up old segments
-  if (fs.existsSync(path.join(__dirname, 'stream'))) {
-    const files = fs.readdirSync(path.join(__dirname, 'stream'));
-    for (const file of files) {
-      if (file.endsWith('.ts') || file.endsWith('.m3u8')) {
-        fs.unlinkSync(path.join(__dirname, 'stream', file));
-      }
-    }
-  } else {
+  if (!fs.existsSync(path.join(__dirname, 'stream'))) {
     fs.mkdirSync(path.join(__dirname, 'stream'), { recursive: true });
   }
 
@@ -79,8 +71,8 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
       '-ar 44100',
       '-f hls',
       '-hls_time 4',
-      '-hls_list_size 5',
-      '-hls_flags delete_segments'
+      '-hls_list_size 20',
+      '-hls_flags append+delete_segments'
     ])
     .output(outputPath)
     .on('start', (commandLine) => {
