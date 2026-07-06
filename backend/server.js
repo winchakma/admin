@@ -44,8 +44,22 @@ app.use(helmet({
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 
-// Serve uploaded media files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
+// Serve uploaded media files with Vault Guard
+app.use('/uploads', (req, res, next) => {
+  const referer = req.get('Referer') || req.get('Origin');
+  // Allow requests from live.ptv.com.bd or localhost, and allow requests with no referer ONLY if they have valid token (if we add tokens later).
+  // For now, strict referer checking:
+  const allowedHosts = ['live.ptv.com.bd', 'localhost', '194.242.57.190'];
+  
+  // Browsers sending requests from your frontend will include a Referer or Origin header
+  const isValidRequest = referer && allowedHosts.some(host => referer.includes(host));
+  
+  if (!isValidRequest) {
+    return res.status(403).send('Vault Access Denied: Direct video downloads are disabled.');
+  }
+  
+  next();
+}, express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
 // Serve local stream outputs
 app.use('/stream', express.static(path.join(__dirname, 'stream'), {
   setHeaders: (res, filePath) => {
