@@ -408,6 +408,12 @@ function AdminPanel() {
     }
   };
 
+  useEffect(() => {
+    if (showLibraryModal) {
+      fetchLibrary();
+    }
+  }, [showLibraryModal]);
+
   const fetchAds = async () => {
     try {
       const res = await apiFetch(`${SOCKET_URL}/api/ads`);
