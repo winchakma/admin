@@ -517,14 +517,6 @@ router.delete('/playlist/:id', protect, authorize('superadmin'), async (req, res
       return res.status(404).json({ error: 'Item not found' });
     }
 
-    // Delete physical file securely
-    if (item.filePath && !item.filePath.includes('..')) {
-      const fullPath = path.join(__dirname, '..', item.filePath);
-      try {
-        await fsPromises.unlink(fullPath);
-      } catch (e) {}
-    }
-
     await Playlist.findByIdAndDelete(req.params.id);
     
     // Notify clients
