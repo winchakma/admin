@@ -56,7 +56,7 @@ const startMasterFfmpeg = () => {
       '-f hls',
       '-hls_time 4',
       '-hls_list_size 20',
-      '-hls_flags delete_segments+append'
+      '-hls_flags delete_segments'
     ])
     .output(outputPath)
     .on('start', (commandLine) => {
