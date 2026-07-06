@@ -331,14 +331,18 @@ const ViewerPage = () => {
     setIsMuted(false);
     setIsPaused(false);
     
-    // Unlock all video elements for unmuted autoplay
+    // Unlock all video elements for unmuted autoplay, but immediately pause the ones not currently active
     [video1Ref, video2Ref, adPlayerRef].forEach(ref => {
       if (ref.current) {
         ref.current.muted = false;
         ref.current.volume = volume;
         const p = ref.current.play();
         if (p !== undefined) {
-          p.catch(() => {});
+          p.then(() => {
+            if (ref.current !== getPlayingElement()) {
+              ref.current.pause();
+            }
+          }).catch(() => {});
         }
       }
     });

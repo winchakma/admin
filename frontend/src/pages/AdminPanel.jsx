@@ -329,13 +329,20 @@ function AdminPanel() {
   const handlePlayUnmute = () => {
     setIsMuted(false);
     
-    // Unlock all video elements for unmuted autoplay
+    // Unlock all video elements for unmuted autoplay, but immediately pause the ones not currently active
     [previewVideo1Ref, previewVideo2Ref, previewAdRef].forEach(ref => {
       if (ref.current) {
         ref.current.muted = false;
         const p = ref.current.play();
         if (p !== undefined) {
-          p.catch(() => {});
+          p.then(() => {
+            const activeEl = status.activeVideo?.isAd 
+              ? previewAdRef.current 
+              : (activePlayer === 1 ? previewVideo1Ref.current : previewVideo2Ref.current);
+            if (ref.current !== activeEl) {
+              ref.current.pause();
+            }
+          }).catch(() => {});
         }
       }
     });
