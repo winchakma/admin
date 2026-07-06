@@ -42,9 +42,10 @@ const startMasterFfmpeg = () => {
   masterFfmpegCommand = ffmpeg()
     .input(streamPipe)
     .inputFormat('mpegts')
+    .inputOptions([
+      '-use_wallclock_as_timestamps 1'
+    ])
     .outputOptions([
-      '-vf setpts=N/30/TB',
-      '-af asetpts=N/44100/TB',
       '-c:v libx264',
       '-preset ultrafast',
       '-crf 28',
