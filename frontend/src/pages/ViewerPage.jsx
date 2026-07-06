@@ -254,9 +254,11 @@ const ViewerPage = () => {
           if (status.nextVideo) {
             const nextNormalized = status.nextVideo.filePath.replace(/\\/g, '/');
             const nextUrl = nextNormalized.startsWith('http') ? nextNormalized : `${SOCKET_URL}/${nextNormalized}`;
-            currentEl.pause();
-            currentEl.src = nextUrl;
-            currentEl.load();
+            setTimeout(() => {
+              currentEl.pause();
+              currentEl.src = nextUrl;
+              currentEl.load();
+            }, 350);
           }
         };
         nextEl.oncanplay = onReady;
