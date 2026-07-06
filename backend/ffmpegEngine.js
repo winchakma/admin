@@ -8,11 +8,10 @@ ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 let activeFfmpegCommand = null;
 let watcherInterval = null;
 
-// Stitcher state
 let globalSequence = 0;
 let masterSegments = [];
 let discontinuityNext = false;
-let lastSeenSegment = '';
+let lastProcessedTempSequence = -1;
 let isFirstBoot = true;
 
 const streamDir = path.join(__dirname, 'stream');
@@ -81,38 +80,45 @@ const pollTempM3u8 = () => {
     const content = fs.readFileSync(tempM3u8Path, 'utf8');
     const lines = content.split('\n');
     
+    // Find the latest chunk to process correctly
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].startsWith('#EXTINF:')) {
         const duration = parseFloat(lines[i].split(':')[1].split(',')[0]);
         const filename = lines[i+1].trim();
         
-        if (filename && filename !== lastSeenSegment) {
-          const tempTsPath = path.join(tempDir, filename);
-          if (!fs.existsSync(tempTsPath)) continue;
+        // We need to only process chunks that have a higher number than what we've processed in this temp directory
+        const match = filename.match(/live(\d+)\.ts/);
+        if (match) {
+          const tempSeqNum = parseInt(match[1]);
+          
+          if (tempSeqNum > lastProcessedTempSequence) {
+            const tempTsPath = path.join(tempDir, filename);
+            if (!fs.existsSync(tempTsPath)) continue;
 
-          lastSeenSegment = filename;
-          
-          const newFilename = `master_${globalSequence}.ts`;
-          const finalTsPath = path.join(streamDir, newFilename);
-          
-          fs.copyFileSync(tempTsPath, finalTsPath);
-          
-          masterSegments.push({
-            duration,
-            filename: newFilename,
-            discontinuity: discontinuityNext
-          });
-          
-          globalSequence++;
-          discontinuityNext = false;
-          
-          if (masterSegments.length > 20) {
-            const removed = masterSegments.shift();
-            const oldFile = path.join(streamDir, removed.filename);
-            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+            lastProcessedTempSequence = tempSeqNum;
+            
+            const newFilename = `master_${globalSequence}.ts`;
+            const finalTsPath = path.join(streamDir, newFilename);
+            
+            fs.copyFileSync(tempTsPath, finalTsPath);
+            
+            masterSegments.push({
+              duration,
+              filename: newFilename,
+              discontinuity: discontinuityNext
+            });
+            
+            globalSequence++;
+            discontinuityNext = false;
+            
+            if (masterSegments.length > 20) {
+              const removed = masterSegments.shift();
+              const oldFile = path.join(streamDir, removed.filename);
+              if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+            }
+            
+            writeMasterM3u8();
           }
-          
-          writeMasterM3u8();
         }
       }
     }
@@ -137,8 +143,8 @@ const startFfmpegStream = (inputVideoPath, offset = 0, onCrash = null) => {
     });
   }
   
-  // reset lastSeenSegment because temp directory is cleared
-  lastSeenSegment = '';
+  // reset lastProcessedTempSequence because temp directory is cleared
+  lastProcessedTempSequence = -1;
 
   const outputPath = path.join(tempDir, 'live.m3u8');
   
