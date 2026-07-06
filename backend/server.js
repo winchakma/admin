@@ -8,8 +8,6 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
 const mongoose = require('mongoose');
 const path = require('path');
 const connectDB = require('./config/db');
@@ -34,20 +32,6 @@ const io = socketIo(server, { cors: corsOptions });
 app.set('io', io);
 
 // Middleware
-app.use(helmet({ 
-  crossOriginResourcePolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "ws:", "wss:"],
-      mediaSrc: ["'self'", "blob:"],
-    },
-  },
-  frameguard: { action: 'deny' }, // X-Frame-Options
-})); // Allowed for stream serving
-app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 

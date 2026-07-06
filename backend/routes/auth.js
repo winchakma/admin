@@ -6,13 +6,7 @@ const User = require('../models/User');
 const InvitedEmail = require('../models/InvitedEmail');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/role');
-const rateLimit = require('express-rate-limit');
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per `window`
-  message: { success: false, message: 'Too many login attempts, please try again after 15 minutes' }
-});
 
 // Helper function to sign JWT
 const signToken = (id) => {
@@ -81,7 +75,7 @@ router.post('/register', async (req, res) => {
 
 // @route   POST /api/auth/login
 // @desc    Login user
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
