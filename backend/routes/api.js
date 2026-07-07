@@ -181,8 +181,29 @@ router.post('/upload/chunk', protect, chunkUploadLimiter, uploadChunks.single('c
         await fsPromises.unlink(partPath).catch(() => {});
       }
       
-      const duration = await getVideoDuration(finalFilePath);
-      const relativePath = path.join('uploads', `${uploadId}-${originalname}`).replace(/\\/g, '/');
+      // OPTIMIZE VIDEO (FASTSTART)
+      const util = require('util');
+      const execFileAsync = util.promisify(execFile);
+      const optimizedFileName = `${uploadId}-opt-${originalname.replace(/\.[^/.]+$/, "")}.mp4`;
+      const optimizedFilePath = path.join(finalUploadDir, optimizedFileName);
+      
+      let finalPathToUse = finalFilePath;
+      try {
+        await execFileAsync('ffmpeg', [
+          '-i', finalFilePath,
+          '-c', 'copy',
+          '-movflags', '+faststart',
+          '-y',
+          optimizedFilePath
+        ]);
+        await fsPromises.unlink(finalFilePath).catch(() => {});
+        finalPathToUse = optimizedFilePath;
+      } catch (err) {
+        console.error('Video optimization skipped/failed:', err);
+      }
+
+      const duration = await getVideoDuration(finalPathToUse);
+      const relativePath = path.join('uploads', path.basename(finalPathToUse)).replace(/\\/g, '/');
       return res.json({ completed: true, filePath: relativePath, duration: duration });
     } else {
       return res.json({ completed: false, message: `Chunk ${chunkIndex} uploaded` });
